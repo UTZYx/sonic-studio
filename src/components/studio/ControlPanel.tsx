@@ -20,11 +20,13 @@ interface ControlPanelProps {
     setSpeed: (v: number) => void;
     duration: number;
     setDuration: (v: number) => void;
+    tempo?: number;
+    setTempo?: (v: number) => void;
     instrumentalOnly?: boolean;
     setInstrumentalOnly?: (v: boolean) => void;
 }
 
-export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
+export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, tempo = 120, setTempo, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
     const isGenerating = status === "submitting" || status === "processing" || status === "queued";
 
     return (
@@ -94,6 +96,18 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             color="purple"
                             size={38}
                         />
+                        {mode === "music" && setTempo && (
+                            <Knob
+                                label="BPM"
+                                value={tempo}
+                                onChange={setTempo}
+                                min={60}
+                                max={200}
+                                step={1}
+                                color="green"
+                                size={38}
+                            />
+                        )}
                     </div>
                 </div>
 

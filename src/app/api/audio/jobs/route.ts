@@ -14,8 +14,14 @@ export async function POST(req: Request) {
         if (!text) return NextResponse.json({ error: "Missing text" }, { status: 400 });
 
         // IMPORTANT: We must explicitly pass 'layers' from body to the job input
+        // Inject Tempo into Prompt if present (MusicGen workaround)
+        let processedText = text;
+        if (type === "music" && settings?.tempo) {
+            processedText = `${processedText}, ${settings.tempo} BPM`;
+        }
+
         const job = JobStore.create(type, {
-            text,
+            text: processedText,
             voiceId,
             duration,
             settings,

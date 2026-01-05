@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 
 // The Memory of the System
-const WEIGHTS_PATH = path.join(process.env.HOME || "", "CrimsonCassini", "central_intelligence", "synapse_weights.json");
+// V2: Use project-local data path for container persistence
+const WEIGHTS_PATH = path.join(process.cwd(), "data", "synapse_weights.json");
 
 interface SynapseMemory {
     genres: Record<string, number>;
@@ -32,13 +33,24 @@ const DEFAULT_MEMORY: SynapseMemory = {
 export class Synapse {
     // Load Memory
     static load(): SynapseMemory {
-        if (!fs.existsSync(WEIGHTS_PATH)) {
-            // Ensure dir exists
-            const dir = path.dirname(WEIGHTS_PATH);
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        // Ensure dir exists
+        const dir = path.dirname(WEIGHTS_PATH);
+        if (!fs.existsSync(dir)) {
+            try {
+                fs.mkdirSync(dir, { recursive: true });
+            } catch (e) {
+                console.warn("[Synapse] Failed to create data dir:", e);
+                return DEFAULT_MEMORY;
+            }
+        }
 
+        if (!fs.existsSync(WEIGHTS_PATH)) {
             // Initialize
-            fs.writeFileSync(WEIGHTS_PATH, JSON.stringify(DEFAULT_MEMORY, null, 2));
+            try {
+                fs.writeFileSync(WEIGHTS_PATH, JSON.stringify(DEFAULT_MEMORY, null, 2));
+            } catch (e) {
+                console.warn("[Synapse] Read-only filesystem? Using default memory.");
+            }
             return DEFAULT_MEMORY;
         }
 
@@ -52,7 +64,11 @@ export class Synapse {
 
     // Save Memory
     static save(mem: SynapseMemory) {
-        fs.writeFileSync(WEIGHTS_PATH, JSON.stringify(mem, null, 2));
+        try {
+            fs.writeFileSync(WEIGHTS_PATH, JSON.stringify(mem, null, 2));
+        } catch (e) {
+            console.warn("[Synapse] Failed to save memory (Read-only?):", e);
+        }
     }
 
     // Reinforce a pattern (Reward or Punish)
