@@ -1,50 +1,54 @@
+# Sonic Studio - Golden Master Handover
 
-# Sonic Studio - Project Handover
+**Mission Status**: **OPERATIONAL (Golden Master v1.3)** 🟢
+The system has been stabilized, the backend bridged, and the neural link established.
 
-**Mission Complete** 🚀
-We have successfully built **Sonic Studio v0.9**, a "Cyber-Noir" audio generation platform featuring a hybrid engine (Voice + Music), async job processing, and a client-side mixing station with 3D visuals.
+## ⚡️ Quick Start
 
-## 📂 Project Structure
+To ignite the entire stack (Frontend + Neural Bridge):
 
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── audio/jobs/      # Async Job System (POST/GET)
-│   │   └── audio/tracks/    # Library Management
-│   └── studio/page.tsx      # Main UI (Dual Generators + Mixer)
-├── components/
-│   └── studio/
-│       ├── MixerPanel.tsx   # Web Audio API Mixing logic
-│       └── Visualizer.tsx   # Three.js 3D Audio Visualizer
-└── lib/
-    ├── audio/engine.ts      # Core AudioContext Engine
-    ├── elevenlabs/client.ts # Robust TTS Client
-    ├── jobs/store.ts        # In-memory Job Queue
-    ├── library/db.ts        # JSON-based persistence
-    └── suno/client.ts       # Suno API Stub (Mock)
-```
-
-## ✅ Completed Features
-1.  **Robust Internal Service**: `ElevenClient` with timeout handling and clean error normalization.
-2.  **Async Job Architecture**: Decoupled generation from UI. Jobs enter a queue and are polled for status.
-3.  **Dual-Engine Support**:
-    *   **Voice**: Live integration with ElevenLabs.
-    *   **Music**: Mock integration with Suno (serving `demo_beat.mp3`).
-4.  **Studio Mixer**:
-    *   Independent volume controls for Voice and Music tracks.
-    *   **3D Visualizer**: Real-time frequency analysis using React Three Fiber.
-5.  **Library System**: Save your best generations to a persistent local database (`sonic-library.json`).
-6.  **Polished UI**: Framer Motion animations, Glassmorphism design, and Lucide icons.
-
-## 🔜 Next Steps for User
-1.  **Get a Suno API Key**: Replace the mock logic in `src/app/api/audio/jobs/route.ts` with a real call to `SunoClient`.
-2.  **Deploy Database**: Move from `sonic-library.json` to a real DB (Postgres/Supabase) for production.
-3.  **Storage**: Replace Data URIs with S3 buckets for audio file storage.
-
-## 🏁 How to Run
 ```bash
+# Terminal 1: Frontend
 cd sonic-studio
 npm run dev
-# Visit http://localhost:3003/studio
+
+# Terminal 2: Neural Bridge (Backend)
+cd sonic-studio/server
+source venv/bin/activate
+./start_bridge.sh
 ```
+
+Visit: **<http://localhost:3000/studio>**
+
+## 🛠 Core Systems
+
+1. **Neural Bridge (Python/FastAPI)**:
+    * **Status**: Online (Port 8000).
+    * **Model**: MusicGen Small (Local GPU).
+    * **Fixes Applied**:
+        * Switched to `scipy` for WAV encoding (bypassing `torchaudio`/`ffmpeg` issues).
+        * Added `/health` endpoint for robust frontend connectivity checks.
+        * Fixed `audiocraft` dependency conflicts.
+
+2. **Sonic Studio (Next.js)**:
+    * **Status**: Online (Port 3000).
+    * **Features**:
+        * **Field Composition**: Spectral mixing with Volume/Pan controls.
+        * **Synapse**: Feedback loop that learns from your "Stars".
+        * **Stream Output**: Unified logging panel for all system events.
+
+## ⚠️ Known Behaviors
+
+* **Startup Time**: The Neural Bridge takes ~10-15s to load the MusicGen model into VRAM. during this time, the frontend may show "Connecting...".
+* **Cloud Fallback**: If the local bridge fails or is stopped, the system automatically routes requests to the HuggingFace Cloud API.
+
+## 🚀 Deployment (Jules)
+
+To deploy this Golden Master to your production environment (Jules):
+
+```bash
+git remote add jules <YOUR_JULES_GIT_URL>
+git push jules main
+```
+
+*End of Report.*
