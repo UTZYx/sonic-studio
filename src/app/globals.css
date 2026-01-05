@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 3, 3, 3;
+  --background-end-rgb: 1, 1, 1;
+
+  --accent-cyan: #22d3ee;
+  --accent-purple: #c084fc;
+  --accent-pink: #f472b6;
+
+  --glass-bg: rgba(6, 6, 6, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-reflection: rgba(255, 255, 255, 0.08);
+}
+
+@layer base {
+  body {
+    @apply bg-[#030303] text-white selection:bg-cyan-500/30 overflow-x-hidden antialiased;
+    background-image:
+      radial-gradient(circle at 50% -20%, rgba(34, 211, 238, 0.1), transparent 70%),
+      radial-gradient(circle at 0% 100%, rgba(192, 132, 252, 0.05), transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(244, 114, 182, 0.05), transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+
+  /* The Dissolving Glass - Multi-layered blur for ultimate depth */
+  .spatial-glass-advanced {
+    @apply backdrop-blur-[40px] border relative;
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.4), rgba(5, 5, 5, 0.6));
+    border-color: var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-reflection),
+      0 30px 60px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Cursive LED - A subtle path of light that traces the component */
+  .led-cursive-path {
+    position: absolute;
+    inset: -1px;
+    border: 1px solid transparent;
+    border-radius: inherit;
+    background: linear-gradient(var(--angle), transparent 20%, var(--accent-cyan), transparent 80%) border-box;
+    mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.6;
+    animation: rotate-angle 6s linear infinite;
+  }
+
+  .led-cursive-purple {
+    background: linear-gradient(var(--angle), transparent 20%, var(--accent-purple), transparent 80%) border-box;
+    animation: rotate-angle 8s linear infinite reverse;
+  }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-angle {
+  0% {
+    --angle: 0deg;
+  }
+
+  100% {
+    --angle: 360deg;
+  }
+}
+
+.text-glow-sm {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.noscroll::-webkit-scrollbar {
+  display: none;
+}
+
+.noscroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

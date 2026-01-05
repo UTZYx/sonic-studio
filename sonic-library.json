@@ -1,0 +1,25 @@
+{
+  "tracks": [
+    {
+      "id": "test-job-1767082315670",
+      "type": "sfx",
+      "title": "Test Masterpiece",
+      "prompt": "Library Test",
+      "tags": [
+        "Spike",
+        "sfx"
+      ],
+      "createdAt": 1767082315671,
+      "assets": [
+        {
+          "id": "test-job-1767082315670-asset",
+          "trackId": "test-job-1767082315670",
+          "storageUrl": "/library/test-job-1767082315670.mp3",
+          "mimeType": "audio/mpeg",
+          "byteLength": 123,
+          "createdAt": 1767082315671
+        }
+      ]
+    }
+  ]
+}
