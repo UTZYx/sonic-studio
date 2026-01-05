@@ -1,4 +1,4 @@
-# Sonic Studio v1.3 - Golden Master Walkthrough
+# Sonic Studio - Operational Manual
 
 **Status**: Ready for Deployment
 **Version**: 1.3 (Golden Master)
