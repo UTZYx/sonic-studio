@@ -8,3 +8,4 @@ out
 node_modules
 server/bridge.log
 *.log
+**/__pycache__
