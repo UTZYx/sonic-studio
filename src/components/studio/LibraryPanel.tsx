@@ -26,7 +26,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const fetchLibrary = async () => {
         try {
             setLoading(true);
-            const res = await fetch("/api/audio/tracks");
+            const res = await fetch("/api/audio/masters");
             const data = await res.json();
             if (data.tracks) {
                 addLog(`[Library] Indexing ${data.tracks.length} outputs...`);
@@ -67,9 +67,21 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         }
     };
 
-    const handleDelete = async (filename: string) => {
-        // Implementation for later - just console log for safe mode
-        console.log("Delete requested for:", filename);
+    const handleDelete = async (id: string) => {
+        if (!confirm("Delete this track permanently?")) return;
+
+        try {
+            const res = await fetch(`/api/audio/masters/${id}`, { method: "DELETE" });
+            if (res.ok) {
+                setFiles(prev => prev.filter(f => f.id !== id));
+                addLog(`[Archive] Deleted track ${id}`);
+            } else {
+                alert("Failed to delete track");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error deleting track");
+        }
     };
 
     return (
@@ -162,6 +174,14 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                         >
                                             <Download className="w-4 h-4" />
                                         </a>
+
+                                        <button
+                                            onClick={() => handleDelete(file.id)}
+                                            className="p-2 text-neutral-600 hover:text-red-400 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
 
                                         <button
                                             onClick={async () => {

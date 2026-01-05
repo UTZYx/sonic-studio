@@ -118,7 +118,7 @@ export default function StudioPage() {
         console.log("Igniting Gapless Sequence...");
         await sequencerRef.current.playSequence(urls, (index) => {
             setActiveSegmentIndex(index);
-        });
+        }, 2.0); // 2 second crossfade
     };
 
     const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_PRESET.id);
@@ -228,7 +228,7 @@ export default function StudioPage() {
         const title = window.prompt(`Name this ${type} track:`, prompt.slice(0, 20));
         if (title) {
             try {
-                const res = await fetch("/api/audio/tracks", {
+                const res = await fetch("/api/audio/masters", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ jobId: targetJobId, title })
