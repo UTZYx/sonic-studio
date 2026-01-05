@@ -73,13 +73,18 @@ export async function GET(req: Request) {
             const stats = fs.statSync(fullPath);
 
             // Try to read metadata sidecar
-            let prompt = "Generated Audio";
+            let prompt: string | null = null;
             const metaPath = fullPath + ".json";
             if (fs.existsSync(metaPath)) {
                 try {
                     const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
-                    prompt = meta.prompt || prompt;
-                } catch (e) { }
+                    // Ensure we have a string
+                    if (meta.prompt && typeof meta.prompt === 'string') {
+                        prompt = meta.prompt;
+                    }
+                } catch (e) {
+                    // Ignore corrupted sidecar files
+                }
             }
 
             return {
