@@ -8,6 +8,7 @@ export interface GenerationInput {
     settings?: {
         warmth?: number;
         speed?: number;
+        tempo?: number;
         instrumentalOnly?: boolean;
         [key: string]: any;
     };

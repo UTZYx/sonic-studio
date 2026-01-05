@@ -124,6 +124,7 @@ export default function StudioPage() {
     const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_PRESET.id);
     const [warmth, setWarmth] = useState(0.5);
     const [speed, setSpeed] = useState(0.5);
+    const [tempo, setTempo] = useState(120);
     const [duration, setDuration] = useState(10);
     const [instrumentalOnly, setInstrumentalOnly] = useState(false);
     const [pollingJobId, setPollingJobId] = useState<string | null>(null);
@@ -206,7 +207,7 @@ export default function StudioPage() {
                     type: mode === "voice" ? "tts" : mode === "sfx" ? "sfx" : "music",
                     voiceId: mode === "voice" ? VOICE_PRESETS.find(v => v.id === selectedVoice)?.elevenLabsId : undefined,
                     duration: (mode === "music" || mode === "sfx") ? duration : undefined,
-                    settings: { warmth, speed, instrumentalOnly }
+                    settings: { warmth, speed, tempo, instrumentalOnly }
                 }),
             });
             const data = await res.json();
@@ -367,6 +368,7 @@ export default function StudioPage() {
                                 startJob={startJob}
                                 warmth={warmth} setWarmth={setWarmth}
                                 speed={speed} setSpeed={setSpeed}
+                                tempo={tempo} setTempo={setTempo}
                                 duration={duration} setDuration={setDuration}
                                 instrumentalOnly={instrumentalOnly} setInstrumentalOnly={setInstrumentalOnly}
                             />

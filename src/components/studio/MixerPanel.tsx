@@ -8,6 +8,7 @@ import { Fader } from "@/components/ui/Fader";
 import { Switch } from "@/components/ui/Switch";
 import { Mic, Music, Save, Volume2, Sliders, Play, Square, Activity, Layers } from "lucide-react";
 import { motion } from "framer-motion";
+import { AudioVisualizer } from "@/components/studio/AudioVisualizer";
 
 const Visualizer = dynamic(() => import("./Visualizer").then(mod => mod.Visualizer), { ssr: false });
 
@@ -259,7 +260,13 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
             <div className="flex flex-col lg:flex-row gap-8 items-center bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
                 <div className="flex-1 w-full relative">
                     <div className="h-[120px] rounded-2xl overflow-hidden bg-black/40 border border-white/5 relative group">
+                        {/* Audio Visualizer (The Phenomenon) */}
+                        <div className="absolute inset-0 opacity-50 mix-blend-screen">
+                           <AudioVisualizer analyser={engineRef.current?.analyser || null} color="cyan" />
+                        </div>
+                        {/* Legacy Visualizer Fallback or Overlay */}
                         <Visualizer analyser={engineRef.current?.analyser || null} />
+
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                         <div className="absolute top-4 left-4 flex items-center gap-3">
                             <div className="p-2 bg-black/60 rounded-xl border border-white/10 backdrop-blur-md">

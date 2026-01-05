@@ -149,7 +149,10 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
                         {segment.layers && segment.layers.length > 0 ? (
                             <div className="flex-1 p-2 flex flex-col gap-1 overflow-y-auto relative">
                                 {segment.layers.map((layer) => (
-                                    <div key={layer.id} className="flex items-center gap-2 bg-black/20 p-1.5 rounded border border-white/5 hover:border-white/10 transition-colors group/layer">
+                                    <div key={layer.id} className="relative flex items-center gap-2 bg-black/20 p-1.5 rounded border border-white/5 hover:border-white/10 transition-colors group/layer overflow-hidden">
+                                        {/* Spectral Indicator (The "Crayon/Pencil") */}
+                                        <div className={`absolute left-0 top-0 bottom-0 w-0.5 transition-all ${layer.active ? `bg-${segment.color}-500` : 'bg-neutral-800'}`} />
+
                                         {/* Active Toggle */}
                                         <button
                                             onClick={() => {
@@ -157,51 +160,31 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
                                                 const newLayers = segment.layers.map(l => l.id === layer.id ? { ...l, active: !l.active } : l);
                                                 updateSegment(segment.id, { layers: newLayers });
                                             }}
-                                            className={`w-1.5 h-6 rounded-full transition-all ${layer.active ? `bg-${segment.color}-500 shadow-[0_0_5px_currentColor]` : 'bg-neutral-800'}`}
+                                            className={`w-3 h-3 rounded flex items-center justify-center border transition-all ${layer.active ? `bg-${segment.color}-500/20 border-${segment.color}-500/50 text-${segment.color}-400` : 'bg-transparent border-neutral-800 text-neutral-700'}`}
                                             title={layer.active ? "Mute Layer" : "Unmute Layer"}
-                                        />
-
-                                        {/* Solo Button */}
-                                        <button
-                                            onClick={() => {
-                                                if (!segment.layers) return;
-                                                const newLayers = segment.layers.map(l => ({
-                                                    ...l,
-                                                    active: l.id === layer.id // Only this one active
-                                                }));
-                                                updateSegment(segment.id, { layers: newLayers });
-                                            }}
-                                            className="bg-neutral-800 text-[6px] font-mono text-neutral-500 hover:text-white hover:bg-white/10 w-4 h-4 rounded flex items-center justify-center transition-colors"
-                                            title="Solo Layer"
                                         >
-                                            S
+                                            <div className={`w-1.5 h-1.5 rounded-full ${layer.active ? `bg-${segment.color}-400` : 'bg-neutral-800'}`} />
                                         </button>
 
-                                        {/* Role & Provider */}
-                                        <div className="flex flex-col w-12">
-                                            <input
-                                                value={layer.role}
-                                                onChange={(e) => {
-                                                    if (!segment.layers) return;
-                                                    const newLayers = segment.layers.map(l => l.id === layer.id ? { ...l, role: e.target.value as any } : l);
-                                                    updateSegment(segment.id, { layers: newLayers });
-                                                }}
-                                                className="bg-transparent text-[7px] font-black uppercase tracking-wider text-neutral-500 outline-none w-full"
-                                            />
-                                            <span className="text-[6px] font-mono text-neutral-600 truncate">{layer.provider.split('-')[1]}</span>
+                                        {/* Role & Provider (Compact) */}
+                                        <div className="flex flex-col w-10 shrink-0">
+                                            <span className="text-[7px] font-black uppercase tracking-wider text-neutral-500 truncate" title={layer.role}>{layer.role.slice(0,4)}</span>
+                                            <span className="text-[6px] font-mono text-neutral-600 truncate">{layer.provider === 'cloud-eleven' ? '11L' : 'GPU'}</span>
                                         </div>
 
-                                        {/* Layer Prompt */}
-                                        <input
-                                            value={layer.prompt}
-                                            onChange={(e) => {
-                                                if (!segment.layers) return;
-                                                const newLayers = segment.layers.map(l => l.id === layer.id ? { ...l, prompt: e.target.value } : l);
-                                                updateSegment(segment.id, { layers: newLayers });
-                                            }}
-                                            className="flex-1 bg-transparent text-[9px] outline-none text-neutral-300 placeholder:text-neutral-700 font-mono"
-                                            placeholder={`Describe ${layer.role}...`}
-                                        />
+                                        {/* Layer Prompt (Main) */}
+                                        <div className="flex-1 flex flex-col justify-center h-full">
+                                            <input
+                                                value={layer.prompt}
+                                                onChange={(e) => {
+                                                    if (!segment.layers) return;
+                                                    const newLayers = segment.layers.map(l => l.id === layer.id ? { ...l, prompt: e.target.value } : l);
+                                                    updateSegment(segment.id, { layers: newLayers });
+                                                }}
+                                                className="bg-transparent text-[9px] outline-none text-neutral-300 placeholder:text-neutral-700 font-mono w-full"
+                                                placeholder={`Describe ${layer.role}...`}
+                                            />
+                                        </div>
 
                                         {/* Mixing Controls (Vol / Pan) */}
                                         <div className="flex items-center gap-2 pr-2 border-l border-white/5 pl-2 opacity-50 group-hover/layer:opacity-100 transition-opacity">

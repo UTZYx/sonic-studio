@@ -1,0 +1,18 @@
+{
+  "genres": {
+    "cyberpunk": 0.5,
+    "ambient": 0.5,
+    "lofi": 0.5,
+    "orchestral": 0.5
+  },
+  "providers": {
+    "local-gpu": 0.8,
+    "cloud-eleven": 0.5,
+    "cloud-hf": 0.5
+  },
+  "moods": {
+    "dark": 0.5,
+    "uplifting": 0.5,
+    "neutral": 0.5
+  }
+}
