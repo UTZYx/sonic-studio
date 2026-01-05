@@ -52,15 +52,7 @@ export async function POST(req: Request) {
         const stats = fs.statSync(filePath);
         const newTrack: MasterTrack = {
             id: filename,
-            title: filename, // or use 'title' from request? request title is user friendly, filename is safe. Let's use filename as ID and Title for consistency with legacy, or store user title separately?
-            // The store uses filename as ID for legacy compat.
-            // Let's store the user title in 'title' if we want, but legacy used filename.
-            // But wait, the request has `title`.
-            // The file on disk is `safeTitle...`.
-            // Let's use `filename` as ID, and `title` (user provided) if we can, but the UI expects `name` (which maps to `title` in GET).
-            // Currently GET maps `title: f` (filename).
-            // Let's improve this: store user title in store if possible?
-            // `MasterTrack` has `title`.
+            title: title || filename, // Use user title if available
             prompt: job.input.text,
             url: `/api/audio/serve/${filename}`,
             size: stats.size,

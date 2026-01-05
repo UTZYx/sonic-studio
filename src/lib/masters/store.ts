@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { v4 as uuidv4 } from "uuid";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "masters.json");
@@ -29,12 +28,6 @@ try {
     if (fs.existsSync(DB_PATH)) {
         const data = fs.readFileSync(DB_PATH, "utf-8");
         globalMasters = JSON.parse(data);
-    } else {
-        // Initial population from filesystem if DB is empty (migration)
-        // We will do this lazily or explicitly? Let's do it once on startup if empty.
-        // Actually, let's just leave it empty and let the 'sync' logic or manual addition handle it.
-        // But for "fixing LibraryPanel list logic", we should probably ensure existing files are visible.
-        // I'll implement a sync function.
     }
 } catch (e) {
     console.error("Failed to load masters DB:", e);
@@ -51,8 +44,6 @@ const persist = () => {
 
 export const MasterStore = {
     getAll: (): MasterTrack[] => {
-        // Optional: Re-scan filesystem to find files not in DB?
-        // For now, let's trust the DB, but maybe we should populate it if it's empty and files exist.
         if (globalMasters.length === 0 && fs.existsSync(OUTPUTS_DIR)) {
            MasterStore.syncWithFileSystem();
         }
@@ -60,13 +51,42 @@ export const MasterStore = {
     },
 
     add: (track: MasterTrack) => {
-        // Check if exists
         const exists = globalMasters.find(t => t.id === track.id || t.url === track.url);
         if (exists) return exists;
 
         globalMasters.push(track);
         persist();
         return track;
+    },
+
+    delete: (id: string) => {
+        const trackIndex = globalMasters.findIndex(t => t.id === id);
+        if (trackIndex === -1) return false;
+
+        const track = globalMasters[trackIndex];
+
+        // Remove from DB
+        globalMasters.splice(trackIndex, 1);
+        persist();
+
+        // Remove from FileSystem (if it matches the ID/Output pattern)
+        // Since ID is filename for legacy, we can try to delete it
+        try {
+            const filename = track.id; // Assuming ID is filename
+            const filePath = path.join(OUTPUTS_DIR, filename);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            // Try delete sidecar
+            const metaPath = filePath + ".json";
+            if (fs.existsSync(metaPath)) {
+                fs.unlinkSync(metaPath);
+            }
+        } catch (e) {
+            console.error("Failed to delete file:", e);
+        }
+
+        return true;
     },
 
     syncWithFileSystem: () => {
@@ -80,11 +100,8 @@ export const MasterStore = {
                 const fullPath = path.join(OUTPUTS_DIR, f);
                 const stats = fs.statSync(fullPath);
 
-                // Check if already in DB
-                // We use filename as ID for legacy/filesystem based tracks
                 const exists = globalMasters.find(t => t.id === f || t.url.endsWith(f));
                 if (!exists) {
-                    // Try to read metadata sidecar
                     let prompt = "Generated Audio";
                     let jobId = undefined;
                     const metaPath = fullPath + ".json";

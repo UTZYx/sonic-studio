@@ -1,15 +1,21 @@
-
 import { NextResponse } from "next/server";
-import { LibraryDB } from "@/lib/library/db";
+import { MasterStore } from "@/lib/masters/store";
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-    try {
-        const id = params.id;
-        if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+export async function DELETE(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
+    const { id } = params;
 
-        LibraryDB.delete(id);
+    if (!id) {
+        return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+
+    const success = MasterStore.delete(id);
+
+    if (success) {
         return NextResponse.json({ ok: true });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+    } else {
+        return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 }
