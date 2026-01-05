@@ -13,7 +13,7 @@ if (!fs.existsSync(CASSINI_ARCHIVE)) {
 
 export async function POST(req: Request) {
     try {
-        const { filename } = await req.json();
+        const { filename, prompt } = await req.json();
         if (!filename) return NextResponse.json({ error: "Filename required" }, { status: 400 });
 
         const sourcePath = path.join(STUDIO_OUTPUTS, filename);
@@ -27,7 +27,6 @@ export async function POST(req: Request) {
         fs.copyFileSync(sourcePath, destPath);
 
         // Synapse Protocol: Positive Reinforcement
-        const { prompt } = await req.json(); // We need to update frontend to send this
         if (prompt) {
             const tags = prompt.split(/[ ,]+/).filter((t: string) => t.length > 3);
             Synapse.reinforce(tags, undefined, 0.1);

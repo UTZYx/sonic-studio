@@ -170,10 +170,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                                     headers: { "Content-Type": "application/json" },
                                                     body: JSON.stringify({
                                                         filename: file.name,
-                                                        prompt: (file as any).prompt || "unknown" // The API currently doesn't return prompt in listing, need to fix that or rely on memory?
-                                                        // Wait, Library API *does* scan files but doesn't persist metadata alongside them unless we parse it.
-                                                        // The `LibraryPanel.tsx` interface `AudioFile` *does not* have prompt currently in the scanning logic I wrote earlier?
-                                                        // Let me check `api/audio/library/route.ts`.
+                                                        prompt: file.prompt || "unknown"
                                                     })
                                                 });
                                                 addLog(`[Archive] Promoted '${file.name}' to Crimson Cassini`);
