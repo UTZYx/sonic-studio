@@ -30,41 +30,47 @@ export class HuggingFaceClient implements AudioProvider {
     }
 
     async generate(type: AudioGenerationType, input: GenerationInput): Promise<GenerationResult> {
-        if (type !== "music") {
-            throw new Error(`HuggingFaceClient only supports 'music' (via MusicGen). Requested: ${type}`);
-        }
-
         // 1. Check Local Bridge (RTX 4060)
         const isLocal = await this.checkLocalBridge();
 
         if (isLocal) {
-            console.log("[Neural Bridge] Routing to Local GPU (High Fidelity)...");
-            return this.generateLocal(input);
+            console.log(`[Neural Bridge] Routing ${type.toUpperCase()} to Local GPU (High Fidelity)...`);
+            return this.generateLocal(type, input);
         }
 
-        // 2. Fallback to Cloud
+        // 2. Fallback to Cloud (Only Music for now)
+        if (type !== "music") {
+            throw new Error(`Cloud fallback only supports 'music'. Local bridge is offline for: ${type}`);
+        }
+
         console.log("[HuggingFace] Local Bridge Offline. Igniting Cloud MusicGen (Free Tier)...");
         return this.generateCloud(input);
     }
 
-    private async generateLocal(input: GenerationInput): Promise<GenerationResult> {
+    private async generateLocal(type: AudioGenerationType, input: GenerationInput): Promise<GenerationResult> {
+        // Map types to bridge models
+        const bridgeType = type === "music" ? "music" : "sfx";
+
         const response = await fetch(`${this.localBridgeUrl}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 prompt: input.text,
-                layers: input.layers, // Pass Crayon Phases
-                duration: input.duration || 15,
-                audio_context: input.settings?.audioContext // The Neural Link
+                type: bridgeType,
+                size: input.settings?.size || "small", // Default to small for speed
+                layers: input.layers,
+                duration: input.duration || 10,
+                audio_context: input.settings?.audioContext
             }),
         });
 
         if (!response.ok) {
-            throw new Error(`Local Bridge Error: ${response.statusText}`);
+            const err = await response.text();
+            throw new Error(`Local Bridge Error: ${err}`);
         }
 
         const blob = await response.blob();
-        return this.blobToResult(blob, "local-gpu", "musicgen-medium");
+        return this.blobToResult(blob, "local-gpu", `${bridgeType}-medium`);
     }
 
     private async generateCloud(input: GenerationInput): Promise<GenerationResult> {

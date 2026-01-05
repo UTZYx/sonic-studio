@@ -74,12 +74,28 @@ export class OrchestratorAgent {
             };
         }
 
+        if (explicitMode === "sfx") {
+            return {
+                type: "sfx",
+                provider: "local-gpu",
+                reasoning: "User explicitly selected SFX Mode. Routing to AudioGen."
+            };
+        }
+
         // 2. Intent Inference (If no mode selected)
         if (p.includes("say") || p.includes("speak") || p.includes("voice") || p.includes("narrate")) {
             return {
                 type: "tts",
                 provider: "cloud-eleven",
                 reasoning: "Detected speech intent."
+            };
+        }
+
+        if (p.includes("sound") || p.includes("effect") || p.includes("noise") || p.includes("foley")) {
+            return {
+                type: "sfx",
+                provider: "local-gpu",
+                reasoning: "Detected SFX intent. Igniting AudioGen."
             };
         }
 

@@ -37,14 +37,22 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
             if (activeNode === 'music' && provider === 'local-gpu') {
                 try {
                     const res = await fetch("http://localhost:8000/health");
+                    if (!res.ok) throw new Error("Offline");
                     const data = await res.json();
 
                     setNodes(prev => prev.map(n => {
                         if (n.id === 'music') {
                             return {
                                 ...n,
-                                status: `GPU: ${data.vram_free || 'Active'}`,
-                                load: 85 // High load when active
+                                status: `VRAM: ${data.vram_allocated || 'Active'}`,
+                                load: data.active_model ? 85 : 10
+                            };
+                        }
+                        if (n.id === 'sfx') {
+                            return {
+                                ...n,
+                                status: data.active_model === 'sfx' ? 'ACTIVE' : 'IDLE',
+                                load: data.active_model === 'sfx' ? 85 : 0
                             };
                         }
                         return n;
@@ -148,10 +156,27 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
                 ))}
             </div>
 
-            <div className="pt-6 border-t border-white/5">
+            <div className="pt-6 border-t border-white/5 space-y-4">
                 <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex items-center justify-between">
                     <div className="flex flex-col">
-                        <span className="text-[8px] font-mono text-neutral-600 uppercase">Active Synapses</span>
+                        <span className="text-[8px] font-mono text-neutral-600 uppercase">Engine Architecture</span>
+                        <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mt-1">
+                            {nodes.find(n => n.id === 'music')?.status !== "idle" ? "NEURAL LINK ACTIVE" : "ESTABLISHING..."}
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                        <span className="text-[9px] font-mono text-cyan-400/80 uppercase">
+                            VRAM: {nodes.find(n => n.id === 'music')?.status.split(": ")[1] || "0 MB"}
+                        </span>
+                        <span className="text-[9px] font-mono text-purple-400/80 uppercase">
+                            Synapse Ready
+                        </span>
+                    </div>
+                </div>
+
+                <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <span className="text-[8px] font-mono text-neutral-600 uppercase">Styles in Gravity</span>
                         <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-1">Memory Matrix</span>
                     </div>
                     <div className="flex flex-col items-end gap-1">

@@ -1,21 +1,19 @@
-
 import os
 import io
 import torch
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import gc
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
-from audiocraft.models import MusicGen
-from audiocraft.data.audio import audio_write
+from audiocraft.models import MusicGen, AudioGen
 import torchaudio
+import scipy.io.wavfile
 
 # --- NEURAL BRIDGE CONFIG ---
-# "medium" is the sweet spot for a 4060 (1.5B parameters, ~4GB VRAM usage)
-# "large" (3.3B) might OOM if VRAM < 8GB with other apps open.
-MODEL_SIZE = os.getenv("MUSICGEN_SIZE", "medium") 
 PORT = int(os.getenv("PORT", 8000))
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 app = FastAPI(title="Sonic Studio Neural Bridge")
 
@@ -28,20 +26,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Model State
-model = None
+class ModelManager:
+    def __init__(self):
+        self.active_model = None
+        self.active_type = None # "music" or "sfx"
+        self.active_size = None
 
-print(f"[{'CUDA' if torch.cuda.is_available() else 'CPU'}] Initializing Neural Bridge...")
+    def _offload(self):
+        if self.active_model:
+            print(f"[Neural Bridge] Offloading {self.active_type} to free VRAM...")
+            self.active_model = None
+            torch.cuda.empty_cache()
+            gc.collect()
 
-try:
-    # Preload Model on Startup
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Loading MusicGen ({MODEL_SIZE}) on {device}...")
-    model = MusicGen.get_pretrained(f'facebook/musicgen-{MODEL_SIZE}', device=device)
-    model.set_generation_params(duration=10) # Default
-    print("Neural Bridge Connected. Ready for Synthesis.")
-except Exception as e:
-    print(f"Initialization Failed: {e}")
+    def get_model(self, model_type="music", size="small"):
+        if self.active_type == model_type and self.active_size == size and self.active_model:
+            return self.active_model
+
+        self._offload()
+        
+        print(f"[Neural Bridge] Loading {model_type.upper()} ({size}) on {DEVICE}...")
+        try:
+            if model_type == "music":
+                self.active_model = MusicGen.get_pretrained(f'facebook/musicgen-{size}', device=DEVICE)
+            elif model_type == "sfx":
+                self.active_model = AudioGen.get_pretrained(f'facebook/audiogen-medium', device=DEVICE)
+            
+            self.active_type = model_type
+            self.active_size = size
+            return self.active_model
+        except Exception as e:
+            print(f"[Neural Bridge] Load Failed: {e}")
+            return None
+
+manager = ModelManager()
 
 class LayerConfig(BaseModel):
     prompt: str
@@ -50,46 +68,43 @@ class LayerConfig(BaseModel):
 
 class GenerationRequest(BaseModel):
     prompt: str
+    type: str = "music" # "music" or "sfx"
+    size: str = "small"
     layers: list[LayerConfig | str] | None = None # Field Composition
-    duration: int = 15
+    duration: int = 10
     audio_context: str | None = None
-    use_sampling: bool = True
     top_k: int = 250
-    top_p: float = 0.0
     temperature: float = 1.0
-
-# ...
 
 @app.get("/health")
 async def health_check():
     """Heartbeat for the frontend"""
-    if not model:
-         raise HTTPException(status_code=503, detail="Neural Engine loading")
-    return {"status": "online", "model": MODEL_SIZE, "device": "cuda" if torch.cuda.is_available() else "cpu"}
+    return {
+        "status": "online", 
+        "active_model": manager.active_type,
+        "device": DEVICE,
+        "vram_allocated": f"{torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB" if torch.cuda.is_available() else "0 MB"
+    }
 
 @app.post("/generate")
-async def generate_music(req: GenerationRequest):
-    """Ignite the local GPU for generation"""
+async def generate(req: GenerationRequest):
+    model = manager.get_model(req.type, req.size)
     if not model:
-        raise HTTPException(status_code=503, detail="Neural Engine not loaded")
+        raise HTTPException(status_code=503, detail="Neural Engine failed to load model")
 
     try:
-        # Determine Prompts (Normalize to LayerConfig)
+        # Normalize Layers
         layers: list[LayerConfig] = []
-        
-        if req.layers and len(req.layers) > 0:
+        if req.layers:
             for l in req.layers:
-                if isinstance(l, str):
-                    layers.append(LayerConfig(prompt=l))
-                else:
-                    layers.append(l)
+                layers.append(LayerConfig(prompt=l) if isinstance(l, str) else l)
         else:
-             layers.append(LayerConfig(prompt=req.prompt))
+            layers.append(LayerConfig(prompt=req.prompt))
 
         prompts = [l.prompt for l in layers]
         is_field = len(layers) > 1
 
-        print(f"Igniting: {len(layers)} layers ({req.duration}s)...")
+        print(f"[Neural Bridge] Igniting {req.type.upper()}: {len(layers)} layers ({req.duration}s)...")
         if is_field: 
             print(f"Field Composition: {[l.prompt for l in layers]}")
 
@@ -97,7 +112,6 @@ async def generate_music(req: GenerationRequest):
         model.set_generation_params(
             duration=req.duration,
             top_k=req.top_k,
-            top_p=req.top_p,
             temperature=req.temperature
         )
 
@@ -107,7 +121,7 @@ async def generate_music(req: GenerationRequest):
              import base64
              audio_bytes = base64.b64decode(req.audio_context.split(",")[1])
              wav_context, sr = torchaudio.load(io.BytesIO(audio_bytes))
-             wav_context = wav_context.to(device)
+             wav_context = wav_context.to(DEVICE)
              
              # Expand context to batch size if Field Composition
              if wav_context.dim() == 2:
@@ -138,17 +152,8 @@ async def generate_music(req: GenerationRequest):
                 if layer_wav.shape[0] == 1:
                     layer_wav = layer_wav.repeat(2, 1)
 
-                # Linear Pan Law: -1 (L=1, R=0) ... 0 (L=0.5, R=0.5) ... 1 (L=0, R=1) -> No, equal power is better but let's do simple linear approximation
-                # Left = (1 - pan) / 2? No.
-                # If pan = -1, L=1, R=0. If pan=0, L=1, R=1? Or L=0.5?
-                # Standard console pan: Center = -3dB usually.
-                # Let's use: L_gain = min(1, 1 - pan), R_gain = min(1, 1 + pan) ... allows Center to be louder (1, 1).
-                # To maintain constant power: L = cos(theta), R = sin(theta).
-                
                 # Simple Linear for Speed:
                 # pan element is -1 to 1.
-                # L_factor = (1.0 - cfg.pan) * 0.5 + 0.5 if pan < 0 else (1.0 - cfg.pan) * 0.5 -> Complicated.
-                
                 # Let's use the straightforward "Balance" control style:
                 left_gain = 1.0 if cfg.pan <= 0 else (1.0 - cfg.pan)
                 right_gain = 1.0 if cfg.pan >= 0 else (1.0 + cfg.pan)
@@ -171,7 +176,6 @@ async def generate_music(req: GenerationRequest):
         
         # Use Torchaudio to save to buffer
         # Use Scipy for robust WAV encoding (Avoids AV/FFmpeg issues)
-        import scipy.io.wavfile
         
         # wav_cpu is [Channels, Time] -> need [Time, Channels] for Scipy
         audio_np = wav_cpu.numpy().T
@@ -183,7 +187,7 @@ async def generate_music(req: GenerationRequest):
         return Response(content=buff.read(), media_type="audio/wav")
 
     except Exception as e:
-        print(f"Generation Error: {e}")
+        print(f"[Neural Bridge] Generation Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

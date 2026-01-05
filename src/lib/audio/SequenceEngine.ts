@@ -15,24 +15,19 @@ export class SequenceEngine {
 
     async playSequence(urls: string[], onProgress?: (index: number) => void) {
         if (this.ctx.state === 'suspended') await this.ctx.resume();
-        this.stop(); // Clear previous
+        this.stop();
 
         this.isPlaying = true;
-        let startTime = this.ctx.currentTime + 0.1; // Small buffer
+        let startTime = this.ctx.currentTime + 0.1;
 
-        // Load all buffers first (High fidelity, pre-load approach)
-        // For a pro sequencer, we might stream, but for <5 mins, loading is safer for gapless.
         const buffers = await Promise.all(urls.map(url => this.loadAudio(url)));
 
         buffers.forEach((buffer, index) => {
             const source = this.ctx.createBufferSource();
             source.buffer = buffer;
             source.connect(this.ctx.destination);
-
             source.start(startTime);
 
-            // Schedule visual callback
-            // (Note: setTimeout is less precise than WebAudio, but good enough for UI highlighting)
             const delayMs = (startTime - this.ctx.currentTime) * 1000;
             setTimeout(() => {
                 if (this.isPlaying && onProgress) onProgress(index);
@@ -42,11 +37,37 @@ export class SequenceEngine {
             startTime += buffer.duration;
         });
 
-        // Auto-stop at end
         setTimeout(() => {
-            if (this.isPlaying && onProgress) onProgress(-1); // Reset
+            if (this.isPlaying && onProgress) onProgress(-1);
             this.isPlaying = false;
         }, (startTime - this.ctx.currentTime) * 1000);
+    }
+
+    async playLayered(layers: { url: string; volume?: number; pan?: number }[]) {
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
+        this.stop();
+
+        this.isPlaying = true;
+        const startTime = this.ctx.currentTime + 0.1;
+
+        for (const layer of layers) {
+            const buffer = await this.loadAudio(layer.url);
+            const source = this.ctx.createBufferSource();
+            source.buffer = buffer;
+
+            const gainNode = this.ctx.createGain();
+            gainNode.gain.value = layer.volume ?? 1.0;
+
+            const pannerNode = this.ctx.createStereoPanner();
+            pannerNode.pan.value = layer.pan ?? 0.0;
+
+            source.connect(gainNode);
+            gainNode.connect(pannerNode);
+            pannerNode.connect(this.ctx.destination);
+
+            source.start(startTime);
+            this.sources.push(source);
+        }
     }
 
     stop() {

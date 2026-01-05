@@ -9,24 +9,23 @@ Sonic Studio has evolved into a production-ready creative environment. It now fe
 
 ## Key Features Delivered
 
-### 1. Activating Sound (Neural Bridge)
+### 1. Activating Sound (Multi-Model Neural Bridge)
 
-The application requires the Python backend to utilize the Local GPU for sound generation.
+The application utilizes a **Multi-Model Neural Gateway** that manages both MusicGen (Music) and AudioGen (SFX) on the local GPU. It intelligently switches models and manages VRAM to prevent OOM errors on the RTX 4060.
 
 ```bash
 # In a new terminal window:
 cd server
-python3 -m venv venv
 source venv/bin/activate
-# Install deps (Relaxed constraint for av)
-pip install av
-pip install audiocraft --no-deps
-pip install torch torchaudio transformers sentencepiece uvicorn fastapi python-multipart
-pip install julius omegaconf einops xformers num2words spacy protobuf librosa flashy hydra_colorlog
-./start_bridge.sh
+# Ignite the Gateway
+python3 neural_bridge.py
 ```
 
-*Note: Installing `xformers` significantly speeds up generation but may require specific CUDA versions. If local bridge fails, the system automatically falls back to HuggingFace Cloud.*
+- **MusicGen**: Standard for "Sonic Grid" generation. Supports Small/Medium/Large sizes.
+- **AudioGen**: High-fidelity SFX generation. Activated when SFX intent is detected or mode is explicitly set to SFX.
+- **VRAM Management**: Idle models are automatically offloaded (Garbage Collected) when a different type is requested.
+
+*Note: The first time you ignite a new model (like AudioGen), the bridge will download the weights (~3.7GB). This is a one-time process.*
 
 ### 2. The Mixer (Field Composition)
 
