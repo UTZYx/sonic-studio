@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { JobStore } from "@/lib/jobs/store";
+import { MasterStore, MasterTrack } from "@/lib/masters/store";
 
 const OUTPUTS_DIR = path.join(process.env.HOME || "", "SonicStudio", "outputs");
 if (!fs.existsSync(OUTPUTS_DIR)) fs.mkdirSync(OUTPUTS_DIR, { recursive: true });
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
         // 3. Save Audio
         fs.writeFileSync(filePath, buffer);
 
-        // 4. Save Metadata (Sidecar) for Synapse
+        // 4. Save Metadata (Sidecar) for Synapse (Legacy/Backup)
         const metaPath = path.join(OUTPUTS_DIR, `${filename}.json`);
         const metadata = {
             id: jobId,
@@ -47,6 +48,29 @@ export async function POST(req: Request) {
         };
         fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2));
 
+        // 5. Register in MasterStore
+        const stats = fs.statSync(filePath);
+        const newTrack: MasterTrack = {
+            id: filename,
+            title: filename, // or use 'title' from request? request title is user friendly, filename is safe. Let's use filename as ID and Title for consistency with legacy, or store user title separately?
+            // The store uses filename as ID for legacy compat.
+            // Let's store the user title in 'title' if we want, but legacy used filename.
+            // But wait, the request has `title`.
+            // The file on disk is `safeTitle...`.
+            // Let's use `filename` as ID, and `title` (user provided) if we can, but the UI expects `name` (which maps to `title` in GET).
+            // Currently GET maps `title: f` (filename).
+            // Let's improve this: store user title in store if possible?
+            // `MasterTrack` has `title`.
+            prompt: job.input.text,
+            url: `/api/audio/serve/${filename}`,
+            size: stats.size,
+            created: Date.now(),
+            type: ext === "wav" ? "music" : "voice",
+            jobId: jobId
+        };
+
+        MasterStore.add(newTrack);
+
         return NextResponse.json({ ok: true, path: filePath });
 
     } catch (e: any) {
@@ -55,47 +79,21 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-    // Basic endpoint to list tracks if needed, but we use api/audio/library usually.
-    // However, LibraryPanel.tsx calls fetch("/api/audio/tracks") in line 15!
-    // So we must implement the list here or redirect LibraryPanel to use library endpoint.
-    // I will implement list logic here to fix LibraryPanel.
-
-    // Actually, I created api/audio/library earlier. I should unify.
-    // But LibraryPanel.tsx (Step 3994) calls `/api/audio/tracks`.
-    // I will implement the listing logic here to match LibraryPanel's expectation.
-
     try {
-        const files = fs.readdirSync(OUTPUTS_DIR)
-            .filter(f => f.endsWith(".wav") || f.endsWith(".mp3"));
+        const tracks = MasterStore.getAll();
 
-        const tracks = files.map(f => {
-            const fullPath = path.join(OUTPUTS_DIR, f);
-            const stats = fs.statSync(fullPath);
+        // Map to expected UI format if necessary, but MasterStore structure is already close.
+        // The UI expects:
+        // { id, title, prompt, url, size, created, type, assets }
+        // MasterStore returns MasterTrack
 
-            // Try to read metadata sidecar
-            let prompt = "Generated Audio";
-            const metaPath = fullPath + ".json";
-            if (fs.existsSync(metaPath)) {
-                try {
-                    const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
-                    prompt = meta.prompt || prompt;
-                } catch (e) { }
-            }
+        const mappedTracks = tracks.map(t => ({
+            ...t,
+            createdAt: new Date(t.created), // Legacy field
+            assets: [{ storageUrl: t.url, byteLength: t.size }] // Legacy field
+        }));
 
-            return {
-                id: f, // use filename as ID
-                title: f,
-                prompt: prompt,
-                url: `/api/audio/serve/${f}`,
-                size: stats.size,
-                created: stats.birthtimeMs,
-                type: f.endsWith(".wav") ? "music" : "voice", // rough guess
-                createdAt: stats.birthtime,
-                assets: [{ storageUrl: `/api/audio/serve/${f}`, byteLength: stats.size }]
-            };
-        }).sort((a, b) => b.created - a.created);
-
-        return NextResponse.json({ tracks });
+        return NextResponse.json({ tracks: mappedTracks });
     } catch (e: any) {
         return NextResponse.json({ tracks: [] });
     }

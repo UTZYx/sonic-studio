@@ -26,7 +26,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const fetchLibrary = async () => {
         try {
             setLoading(true);
-            const res = await fetch("/api/audio/tracks");
+            const res = await fetch("/api/audio/masters");
             const data = await res.json();
             if (data.tracks) {
                 addLog(`[Library] Indexing ${data.tracks.length} outputs...`);

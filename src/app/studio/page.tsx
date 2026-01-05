@@ -228,7 +228,7 @@ export default function StudioPage() {
         const title = window.prompt(`Name this ${type} track:`, prompt.slice(0, 20));
         if (title) {
             try {
-                const res = await fetch("/api/audio/tracks", {
+                const res = await fetch("/api/audio/masters", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ jobId: targetJobId, title })
