@@ -284,7 +284,7 @@ export default function StudioPage() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [pollingJobId, status]);
+    }, [pollingJobId, status, addLog, provider]);
 
     return (
         <LogContext.Provider value={{ addLog }}>

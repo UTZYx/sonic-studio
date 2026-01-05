@@ -3,12 +3,13 @@
 # Sonic Studio - Neural Bridge Launcher
 # Activates the AI environment and ignites the Python server
 
-# 1. Activate the dedicated AI environment (User defined)
-source ~/ai/venv/bin/activate
-
-# 2. Check for dependencies (Auto-install if missing on first run)
-if ! python3 -c "import audiocraft" &> /dev/null; then
-    echo "[Neural Bridge] Installing dependencies..."
+# 1. Activate the dedicated AI environment
+if [ -d "venv" ]; then
+    source venv/bin/activate
+else
+    echo "[Neural Bridge] Configuring virtual environment..."
+    python3 -m venv venv
+    source venv/bin/activate
     pip install audiocraft fastapi uvicorn python-multipart
 fi
 

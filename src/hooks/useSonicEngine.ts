@@ -142,7 +142,7 @@ export function useSonicEngine(
             setIsWorking(false);
         }
 
-    }, [timelineSegments, setTimelineSegments]);
+    }, [timelineSegments, setTimelineSegments, addLog]);
 
     return { igniteSegment, isWorking };
 }

@@ -60,6 +60,13 @@ class GenerationRequest(BaseModel):
 
 # ...
 
+@app.get("/health")
+async def health_check():
+    """Heartbeat for the frontend"""
+    if not model:
+         raise HTTPException(status_code=503, detail="Neural Engine loading")
+    return {"status": "online", "model": MODEL_SIZE, "device": "cuda" if torch.cuda.is_available() else "cpu"}
+
 @app.post("/generate")
 async def generate_music(req: GenerationRequest):
     """Ignite the local GPU for generation"""
