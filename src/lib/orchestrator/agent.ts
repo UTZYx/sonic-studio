@@ -15,11 +15,12 @@ import { STYLE_MATRIX } from "./matrix";
  * 3. Fallback Strategy: "If 11Labs is dead, what do we do?"
  */
 
-interface Decision {
+export interface Decision {
     provider: "cloud-eleven" | "cloud-hf" | "local-gpu";
     type: AudioGenerationType;
     reasoning: string;
     suggestedLayers?: string[]; // If music, maybe suggest layers?
+    detectedStyleId?: string;
 }
 
 export class OrchestratorAgent {
@@ -38,6 +39,7 @@ export class OrchestratorAgent {
 
         let suggestedLayers: string[] | undefined = undefined;
         let detectedReasoning = "";
+        let detectedStyleId: string | undefined = undefined;
 
         if (matchedStyles.length > 0) {
             // Pick the strongest match, boosted by Synapse
@@ -47,11 +49,9 @@ export class OrchestratorAgent {
                 return currGravity > prevGravity ? curr : prev;
             });
             suggestedLayers = bestStyle.layers;
+            detectedStyleId = bestStyle.id;
             const gravity = Synapse.getGravity(bestStyle.id);
             detectedReasoning = `Detected '${bestStyle.id}' (Gravity: ${gravity.toFixed(2)}).`;
-        } else {
-            // If no keywords match, try to find a high-gravity style to hallucinate? 
-            // For now, adhere to explicit prompt.
         }
 
         // 1. Explicit Mode Override
@@ -59,7 +59,8 @@ export class OrchestratorAgent {
             return {
                 type: "tts",
                 provider: "cloud-eleven",
-                reasoning: "User explicitly selected Voice Mode."
+                reasoning: "User explicitly selected Voice Mode.",
+                detectedStyleId
             };
         }
 
@@ -70,7 +71,8 @@ export class OrchestratorAgent {
                 reasoning: suggestedLayers
                     ? `${detectedReasoning} Orchestrating Field Composition.`
                     : "User selected Music. Routing to Crimson Engine.",
-                suggestedLayers: suggestedLayers
+                suggestedLayers: suggestedLayers,
+                detectedStyleId
             };
         }
 
@@ -78,7 +80,8 @@ export class OrchestratorAgent {
             return {
                 type: "sfx",
                 provider: "local-gpu",
-                reasoning: "User explicitly selected SFX Mode. Routing to AudioGen."
+                reasoning: "User explicitly selected SFX Mode. Routing to AudioGen.",
+                detectedStyleId
             };
         }
 

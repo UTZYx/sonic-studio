@@ -8,8 +8,8 @@ import { useLog } from "@/lib/logs/context";
 
 interface AudioFile {
     name: string;
-    id: string;   // Was missing?
-    prompt?: string;
+    id: string;
+    prompt?: string | null;
     url: string;
     size: number;
     created: number;
