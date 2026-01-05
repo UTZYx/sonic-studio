@@ -118,7 +118,7 @@ export default function StudioPage() {
         console.log("Igniting Gapless Sequence...");
         await sequencerRef.current.playSequence(urls, (index) => {
             setActiveSegmentIndex(index);
-        });
+        }, 2.0); // 2 second crossfade
     };
 
     const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_PRESET.id);
