@@ -170,8 +170,14 @@ async def generate_music(req: GenerationRequest):
             wav_cpu = wav[0].cpu() # Single batch
         
         # Use Torchaudio to save to buffer
+        # Use Scipy for robust WAV encoding (Avoids AV/FFmpeg issues)
+        import scipy.io.wavfile
+        
+        # wav_cpu is [Channels, Time] -> need [Time, Channels] for Scipy
+        audio_np = wav_cpu.numpy().T
+        
         buff = io.BytesIO()
-        torchaudio.save(buff, wav_cpu, 32000, format="wav")
+        scipy.io.wavfile.write(buff, 32000, audio_np)
         buff.seek(0)
         
         return Response(content=buff.read(), media_type="audio/wav")
