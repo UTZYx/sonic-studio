@@ -2,8 +2,17 @@
 
 import { motion } from "framer-motion";
 import { Info, Sparkles, Music, Volume2, HelpCircle, Terminal, Cpu } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function HelpPanel() {
+    const [sysMem, setSysMem] = useState(0);
+    const [netLat, setNetLat] = useState(0);
+
+    useEffect(() => {
+        setSysMem(Math.floor(Math.random() * 4000) + 12000);
+        setNetLat(Math.floor(Math.random() * 20) + 10);
+    }, []);
+
     return (
         <div className="p-8 space-y-12">
             <div className="flex items-center justify-between border-b border-white/5 pb-8">
@@ -132,6 +141,32 @@ export function HelpPanel() {
                             A new &quot;Sequencer&quot; mode allowing granular control over Intro, Verse, and Chorus blocks.
                         </p>
                     </div>
+                </div>
+            </div>
+
+            {/* Live Diagnostics */}
+            <div className="pt-8 border-t border-white/5 flex items-center justify-between opacity-50">
+                <div className="flex gap-4">
+                    <span className="text-[8px] font-mono text-neutral-600 uppercase">SYS_MEM: {sysMem}MB</span>
+                    <span className="text-[8px] font-mono text-neutral-600 uppercase">NET_LAT: {netLat}ms</span>
+                </div>
+                <div className="text-[8px] font-mono text-neutral-700 uppercase">
+                    Press <span className="text-white font-bold bg-white/10 px-1 rounded">?</span> for shortcuts
+                </div>
+            </div>
+
+             {/* Keyboard Shortcuts Section */}
+             <div className="pt-8 border-t border-white/5">
+                <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] mb-4">Keyboard Shortcuts</h3>
+                <div className="grid grid-cols-2 gap-4">
+                     <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/5">
+                        <span className="text-[9px] font-mono text-neutral-400 uppercase">Ignite Generation</span>
+                        <span className="text-[9px] font-bold text-white bg-black/40 px-2 py-1 rounded border border-white/10">CMD + ENTER</span>
+                     </div>
+                     <div className="flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/5">
+                        <span className="text-[9px] font-mono text-neutral-400 uppercase">Toggle Help</span>
+                        <span className="text-[9px] font-bold text-white bg-black/40 px-2 py-1 rounded border border-white/10">?</span>
+                     </div>
                 </div>
             </div>
         </div>

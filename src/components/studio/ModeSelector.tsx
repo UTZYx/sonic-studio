@@ -15,6 +15,7 @@ export function ModeSelector({ mode, setMode }: ModeSelectorProps) {
                     <button
                         key={m}
                         onClick={() => setMode(m as any)}
+                        aria-label={`Switch to ${m} mode`}
                         className={`
                             relative px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300
                             ${mode === m

@@ -146,9 +146,14 @@ export default function StudioPage() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignite Shortcut (CMD+ENTER)
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                 const btn = document.getElementById("ignite-trigger");
                 if (btn) btn.click();
+            }
+            // Help Shortcut (?)
+            if (e.key === "?") {
+                setShowHelp(prev => !prev);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
