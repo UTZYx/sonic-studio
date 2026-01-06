@@ -179,7 +179,11 @@ export default function StudioPage() {
                     postFx: "none",
                     usePreviousContext: false,
                     color: "cyan",
-                    layers: [] // Initial Field Composition
+                    layers: [
+                        { id: uuidv4(), role: "atmosphere", provider: "local-gpu", prompt: "Ambient texture, spatial drone...", active: true, volume: 0.8, pan: -0.3 },
+                        { id: uuidv4(), role: "core", provider: "local-gpu", prompt: prompt || "Main rhythm, strong melody...", active: true, volume: 1.0, pan: 0 },
+                        { id: uuidv4(), role: "detail", provider: "local-gpu", prompt: "Ear candy, glitches, foley...", active: true, volume: 0.7, pan: 0.3 },
+                    ]
                 }]);
                 // Allow state to settle, then Trigger
                 setTimeout(() => igniteSegment(firstId), 100);
