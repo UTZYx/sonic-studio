@@ -42,6 +42,8 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                         {mode === "music" && setInstrumentalOnly && (
                             <button
                                 onClick={() => setInstrumentalOnly(!instrumentalOnly)}
+                                aria-pressed={instrumentalOnly}
+                                aria-label={instrumentalOnly ? "Disable instrumental mode" : "Enable instrumental mode"}
                                 className={`
                                     mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border transition-all
                                     ${instrumentalOnly
@@ -140,6 +142,7 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                                 <button
                                     key={preset.id}
                                     onClick={() => setVoice(preset.id)}
+                                    aria-pressed={selectedVoice === preset.id}
                                     className={`
                                         px-4 py-2 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-all
                                         ${selectedVoice === preset.id
@@ -160,20 +163,29 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                     <div className="bg-white/5 px-5 py-4 rounded-[2rem] border border-white/5 flex flex-col items-center gap-3">
                         <span className="text-[9px] text-neutral-600 font-mono uppercase tracking-[0.2em]">Quality Profile</span>
                         <div className="flex gap-1.5">
-                            {["ghost", "crisp", "studio"].map(p => (
-                                <button
-                                    key={p}
-                                    onClick={() => {
-                                        if (p === "ghost") { setWarmth(0.2); setSpeed(0.8); }
-                                        if (p === "crisp") { setWarmth(0.8); setSpeed(0.4); }
-                                        if (p === "studio") { setWarmth(0.5); setSpeed(0.5); }
-                                    }}
-                                    className={`w-3 h-3 rounded-full transition-all border ${(p === "ghost" && warmth < 0.4) || (p === "crisp" && warmth > 0.7) || (p === "studio" && warmth >= 0.4 && warmth <= 0.7)
-                                        ? "bg-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
-                                        : "bg-transparent border-neutral-700 hover:border-neutral-500"
-                                        }`}
-                                />
-                            ))}
+                            {["ghost", "crisp", "studio"].map(p => {
+                                const isActive = (p === "ghost" && warmth < 0.4) ||
+                                    (p === "crisp" && warmth > 0.7) ||
+                                    (p === "studio" && warmth >= 0.4 && warmth <= 0.7);
+
+                                return (
+                                    <button
+                                        key={p}
+                                        onClick={() => {
+                                            if (p === "ghost") { setWarmth(0.2); setSpeed(0.8); }
+                                            if (p === "crisp") { setWarmth(0.8); setSpeed(0.4); }
+                                            if (p === "studio") { setWarmth(0.5); setSpeed(0.5); }
+                                        }}
+                                        aria-label={`Select ${p} quality profile`}
+                                        title={p.charAt(0).toUpperCase() + p.slice(1)}
+                                        aria-pressed={isActive}
+                                        className={`w-3 h-3 rounded-full transition-all border ${isActive
+                                            ? "bg-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+                                            : "bg-transparent border-neutral-700 hover:border-neutral-500"
+                                            }`}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
 
