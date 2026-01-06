@@ -152,4 +152,62 @@ export class SequenceEngine {
         // Gains don't need explicit stop, but good to clear array
         this.gains = [];
     }
+
+    async exportSequence(urls: string[], crossfadeDuration: number = 2.0): Promise<Blob> {
+        const buffers = await Promise.all(urls.map(url => this.loadAudio(url)));
+        if (buffers.length === 0) return new Blob([], { type: 'audio/wav' });
+
+        // Calculate total duration
+        let totalDuration = 0;
+        let startTime = 0;
+
+        // Dry run for duration
+        for (let i = 0; i < buffers.length; i++) {
+            const buffer = buffers[i];
+            const fade = Math.min(crossfadeDuration, buffer.duration / 2);
+            if (i === buffers.length - 1) {
+                totalDuration = startTime + buffer.duration;
+            } else {
+                startTime += (buffer.duration - fade);
+            }
+        }
+
+        // Offline Context
+        const offlineCtx = new OfflineAudioContext(2, totalDuration * 44100, 44100);
+
+        startTime = 0;
+        buffers.forEach((buffer, index) => {
+            const source = offlineCtx.createBufferSource();
+            source.buffer = buffer;
+            const gainNode = offlineCtx.createGain();
+
+            source.connect(gainNode);
+            gainNode.connect(offlineCtx.destination);
+
+            const fade = Math.min(crossfadeDuration, buffer.duration / 2);
+
+            // Fade In
+            if (index > 0) {
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(1, startTime + fade);
+            } else {
+                gainNode.gain.setValueAtTime(1, startTime);
+            }
+
+            // Fade Out
+            if (index < buffers.length - 1) {
+                const fadeOutStart = startTime + buffer.duration - fade;
+                const safeFadeOutStart = Math.max(fadeOutStart, startTime + fade);
+                gainNode.gain.setValueAtTime(1, safeFadeOutStart);
+                gainNode.gain.linearRampToValueAtTime(0, startTime + buffer.duration);
+            }
+
+            source.start(startTime);
+            startTime += (buffer.duration - fade);
+        });
+
+        const renderedBuffer = await offlineCtx.startRendering();
+        const { audioBufferToWav } = await import("./utils");
+        return audioBufferToWav(renderedBuffer);
+    }
 }

@@ -7,7 +7,7 @@ import { LibraryPanel } from "@/components/studio/LibraryPanel";
 import { HelpPanel } from "@/components/studio/HelpPanel";
 import { Logo } from "@/components/studio/Logo";
 import { motion, AnimatePresence } from "framer-motion";
-import { HelpCircle, SquareActivity, Terminal } from "lucide-react";
+import { HelpCircle, SquareActivity, Terminal, Download } from "lucide-react";
 import { DEFAULT_PRESET, VOICE_PRESETS } from "@/config/presets";
 import { SpatialCard } from "@/components/studio/SpatialCard";
 import { v4 as uuidv4 } from "uuid";
@@ -119,6 +119,22 @@ export default function StudioPage() {
         await sequencerRef.current.playSequence(urls, (index) => {
             setActiveSegmentIndex(index);
         }, 2.0); // 2 second crossfade
+    };
+
+    const handleBounceTimeline = async () => {
+        const urls = timelineSegments.filter(s => s.status === "completed" && s.audioUrl).map(s => s.audioUrl!);
+        if (urls.length === 0 || !sequencerRef.current) return;
+
+        addLog("[System] Rendering Timeline to WAV...");
+        const blob = await sequencerRef.current.exportSequence(urls, 2.0);
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `UTZYx_Timeline_${new Date().toISOString().slice(0, 19)}.wav`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addLog("[System] Timeline Bounce Complete.");
     };
 
     const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_PRESET.id);
@@ -382,9 +398,18 @@ export default function StudioPage() {
                                     exit={{ opacity: 0, height: 0 }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-2 mb-4 px-2 mt-8">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">Sonic Edit Bar // Multi-System</span>
+                                    <div className="flex items-center gap-2 mb-4 px-2 mt-8 justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-pink-400">Sonic Edit Bar // Multi-System</span>
+                                        </div>
+                                        <button
+                                            onClick={handleBounceTimeline}
+                                            className="flex items-center gap-2 px-3 py-1 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 rounded-full text-[9px] font-bold text-pink-400 uppercase tracking-widest transition-all hover:scale-105"
+                                        >
+                                            <Download className="w-3 h-3" />
+                                            Bounce Timeline
+                                        </button>
                                     </div>
                                     <SpatialCard ledColor="pink">
                                         <div className="p-8">

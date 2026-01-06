@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 // The Memory of the System
-const WEIGHTS_PATH = path.join(process.env.HOME || "", "CrimsonCassini", "central_intelligence", "synapse_weights.json");
+const WEIGHTS_PATH = path.join(process.cwd(), "data", "synapse.json");
 
 interface SynapseMemory {
     genres: Record<string, number>;
