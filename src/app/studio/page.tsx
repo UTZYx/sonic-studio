@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";

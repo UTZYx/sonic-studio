@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, Trash2, Download, Music, Box, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SpatialCard } from "./SpatialCard";
