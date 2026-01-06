@@ -16,6 +16,7 @@ import { ModeSelector } from "@/components/studio/ModeSelector";
 import { Timeline } from "@/components/studio/Timeline/Timeline";
 import { NeuralNodeMonitor } from "@/components/studio/NeuralNodeMonitor";
 import { LogContext } from "@/lib/logs/context";
+import { StreamConsole } from "@/components/studio/StreamConsole";
 import { TimelineSegment } from "@/components/studio/Timeline/types";
 import { SequenceEngine } from "@/lib/audio/SequenceEngine";
 import { useSonicEngine } from "@/hooks/useSonicEngine";
@@ -418,14 +419,7 @@ export default function StudioPage() {
                             <div>
                                 <div className="text-[10px] font-mono text-neutral-700 uppercase tracking-[0.4em] px-4 mb-4">Stream Output</div>
                                 <SpatialCard ledColor="cyan" tilt={false} className="h-[280px]">
-                                    <div className="p-6 font-mono text-[10px] text-neutral-500 h-full overflow-y-auto noscroll">
-                                        {logs.map((log, i) => (
-                                            <div key={i} className="flex gap-4 py-1 border-b border-white/5 last:border-0">
-                                                <span className="text-neutral-800 shrink-0">{i}</span>
-                                                <span className="leading-relaxed">{log}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <StreamConsole logs={logs} />
                                 </SpatialCard>
                             </div>
 
