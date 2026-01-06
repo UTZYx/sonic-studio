@@ -95,11 +95,20 @@ export function useSonicEngine(
 
             if (data.ok && data.jobId) {
                 addLog(`[Link] Job Assigned: ${data.jobId}`);
-                // Poll for Completion
-                const poll = setInterval(async () => {
+
+                // ⚡ Bolt: Adaptive Polling (Smart Channeling)
+                // Replaces naive setInterval to reduce network noise and prevent congestion.
+                let attempt = 0;
+                let isActive = true;
+
+                const poll = async () => {
+                    if (!isActive) return;
+
                     try {
                         const jobRes = await fetch(`/api/audio/jobs/${data.jobId}`);
                         const job = await jobRes.json();
+
+                        if (!isActive) return; // Check again after await
 
                         if (job.status === "completed" && job.result?.url) {
                             addLog(`[Link] Sync Complete: ${data.jobId}`);
@@ -115,20 +124,29 @@ export function useSonicEngine(
                                 selectedVersionId: job.jobId
                             } : s));
                             setIsWorking(false);
-                            clearInterval(poll);
+                            return; // Stop polling
                         } else if (job.status === "failed" || job.status === "failed_quota") {
                             addLog(`[Link] Sync Failed: ${job.error || "Unknown"}`);
                             setTimelineSegments(prev => prev.map(s => s.id === segmentId ? { ...s, status: "error" } : s));
                             if (job.status === "failed_quota") alert("Neural Credits Depleted. Please Recharge or Switch to Local GPU.");
                             setIsWorking(false);
-                            clearInterval(poll);
+                            return; // Stop polling
                         }
+
+                        // Adaptive Delay: 1s for first 5 attempts, then 2s, then 4s (max)
+                        attempt++;
+                        const delay = attempt < 5 ? 1000 : attempt < 15 ? 2000 : 4000;
+                        setTimeout(poll, delay);
+
                     } catch (e) {
                         console.error("Polling Error", e);
-                        clearInterval(poll);
                         setIsWorking(false);
                     }
-                }, 1000);
+                };
+
+                // Ignite Polling
+                setTimeout(poll, 1000);
+
             } else {
                 addLog(`[Engine] Ignition Failed: ${data.error}`);
                 setTimelineSegments(prev => prev.map(s => s.id === segmentId ? { ...s, status: "error" } : s));
