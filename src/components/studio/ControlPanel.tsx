@@ -4,6 +4,8 @@ import { Knob } from "@/components/ui/Knob";
 import { Zap, Terminal, Activity } from "lucide-react";
 import { VOICE_PRESETS } from "../../config/presets";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { ParameterInspector } from "./ParameterInspector";
 
 interface ControlPanelProps {
     prompt: string;
@@ -26,6 +28,7 @@ interface ControlPanelProps {
 
 export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
     const isGenerating = status === "submitting" || status === "processing" || status === "queued";
+    const [activeInspector, setActiveInspector] = useState<any>(null);
 
     return (
         <div className="p-8 relative">
@@ -73,6 +76,13 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                                 max={30}
                                 color="pink"
                                 size={38}
+                                onInteractionStart={() => setActiveInspector({
+                                    label: "DURATION",
+                                    value: `${duration}s`,
+                                    description: "Temporal Window",
+                                    technical: "Length of the generated audio frame"
+                                })}
+                                onInteractionEnd={() => setActiveInspector(null)}
                             />
                         )}
 
@@ -84,6 +94,13 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             max={1}
                             color="cyan"
                             size={38}
+                            onInteractionStart={() => setActiveInspector({
+                                label: "WARMTH",
+                                value: warmth.toFixed(2),
+                                description: "Sampling Temperature",
+                                technical: "Randomness of distribution (0.0=Greedy, 1.0=Stochastic)"
+                            })}
+                            onInteractionEnd={() => setActiveInspector(null)}
                         />
                         <Knob
                             label="STY"
@@ -93,13 +110,22 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             max={1}
                             color="purple"
                             size={38}
+                            onInteractionStart={() => setActiveInspector({
+                                label: "STYLE",
+                                value: speed.toFixed(2),
+                                description: "Top-K Selection",
+                                technical: "Limits next token to K most likely candidates"
+                            })}
+                            onInteractionEnd={() => setActiveInspector(null)}
                         />
                     </div>
                 </div>
 
                 {/* Center Column: Terminal */}
                 <div className="flex-1 flex flex-col gap-6">
-                    <div className="flex-1 min-h-[240px] bg-black/40 rounded-3xl border border-white/5 p-6 relative group flex flex-col focus-within:border-cyan-500/20 transition-all">
+                    <ParameterInspector activeParam={activeInspector} />
+
+                    <div className="flex-1 min-h-[160px] bg-black/40 rounded-3xl border border-white/5 p-6 relative group flex flex-col focus-within:border-cyan-500/20 transition-all">
                         <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
                             <div className="flex items-center gap-3">
                                 <Terminal className="w-4 h-4 text-cyan-400/40" />
