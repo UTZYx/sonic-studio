@@ -153,7 +153,10 @@ export default function StudioPage() {
             }
             // Help Shortcut (?)
             if (e.key === "?") {
-                setShowHelp(prev => !prev);
+                const target = e.target as HTMLElement;
+                if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+                    setShowHelp(prev => !prev);
+                }
             }
         };
         window.addEventListener("keydown", handleKeyDown);
