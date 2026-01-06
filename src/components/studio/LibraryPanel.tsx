@@ -121,8 +121,8 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                 </div>
             ) : files.length === 0 ? (
                 <div className="border border-white/5 border-dashed rounded-[3rem] p-24 text-center group hover:border-white/10 transition-colors">
-                    <Music className="w-12 h-12 text-neutral-900 mx-auto mb-6 group-hover:scale-110 transition-transform" />
-                    <p className="text-neutral-700 text-xs font-mono uppercase tracking-[0.2em]">Archive Empty. Ignite a job.</p>
+                    <Music className="w-12 h-12 text-neutral-800 mx-auto mb-6 group-hover:scale-110 transition-transform" />
+                    <p className="text-neutral-500 text-xs font-mono uppercase tracking-[0.2em] opacity-60">Archive Empty. Ignite a job.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -141,6 +141,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                         {/* Play Button */}
                                         <button
                                             onClick={() => handlePlay(file.url)}
+                                            aria-label={playingFile === file.url ? "Pause Track" : "Play Track"}
                                             className={`
                                                 shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all
                                                 ${playingFile === file.url
@@ -171,6 +172,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                             download={file.name}
                                             className="p-2 text-neutral-600 hover:text-cyan-400 transition-colors"
                                             title="Download"
+                                            aria-label={`Download ${file.name}`}
                                         >
                                             <Download className="w-4 h-4" />
                                         </a>
@@ -179,6 +181,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                             onClick={() => handleDelete(file.id)}
                                             className="p-2 text-neutral-600 hover:text-red-400 transition-colors"
                                             title="Delete"
+                                            aria-label={`Delete ${file.name}`}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -198,6 +201,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                             }}
                                             className="p-2 text-neutral-600 hover:text-yellow-400 transition-colors"
                                             title="Promote to Archive"
+                                            aria-label="Promote to Crimson Cassini"
                                         >
                                             <Star className="w-4 h-4" />
                                         </button>

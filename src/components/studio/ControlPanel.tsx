@@ -6,6 +6,7 @@ import { VOICE_PRESETS } from "../../config/presets";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { ParameterInspector } from "./ParameterInspector";
+import { PulsingButton } from "./PulsingButton";
 
 interface ControlPanelProps {
     prompt: string;
@@ -203,15 +204,16 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                         </div>
                     </div>
 
-                    <button
+                    <PulsingButton
                         id="ignite-trigger"
                         onClick={startJob}
                         disabled={isGenerating}
+                        trigger={`${warmth}-${speed}-${duration}-${prompt}`}
                         className={`
                             h-28 md:flex-1 w-full flex flex-col items-center justify-center gap-3 rounded-[2.5rem] transition-all duration-700 group/btn overflow-hidden relative border border-white/10
                             ${isGenerating
                                 ? "bg-black/40 text-neutral-700 cursor-not-allowed"
-                                : "bg-neutral-900 text-white hover:scale-[1.02] hover:border-white/30"
+                                : "bg-neutral-900 text-white hover:border-white/30"
                             }
                         `}
                     >
@@ -225,7 +227,7 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                         {!isGenerating && (
                             <span className="text-[7px] text-neutral-500 font-mono mt-1 opacity-0 group-hover/btn:opacity-100 transition-opacity">CMD+ENTER</span>
                         )}
-                    </button>
+                    </PulsingButton>
                 </div>
             </div>
         </div>
