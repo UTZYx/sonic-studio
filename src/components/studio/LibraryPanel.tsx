@@ -165,7 +165,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
 
                                         <button
                                             onClick={async () => {
-                                                await fetch("/api/audio/favorites", {
+                                                await fetch("/api/audio/masters", {
                                                     method: "POST",
                                                     headers: { "Content-Type": "application/json" },
                                                     body: JSON.stringify({
@@ -173,11 +173,11 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                                         prompt: file.prompt || "unknown"
                                                     })
                                                 });
-                                                addLog(`[Archive] Promoted '${file.name}' to Crimson Cassini`);
-                                                alert("Archived to Crimson Cassini");
+                                                addLog(`[Archive] Promoted '${file.name}' to Crimson Masters`);
+                                                alert("Archived to Crimson Masters");
                                             }}
                                             className="p-2 text-neutral-600 hover:text-yellow-400 transition-colors"
-                                            title="Promote to Archive"
+                                            title="Promote to Masters"
                                         >
                                             <Star className="w-4 h-4" />
                                         </button>

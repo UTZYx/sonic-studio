@@ -57,6 +57,8 @@ export class JobProcessor {
             console.log(`[JobProcessor] Job ${jobId} dispatched to ${providerInstance.constructor.name} (Provider: ${targetProvider})`);
 
             // 4. GENERATION
+            // Calm Architecture: We don't just generate a blob, we generate a structured artifact.
+            // The 'result' now contains 'stems' and 'metadata'.
             const result = await providerInstance.generate(job.type as any, {
                 text: job.input.text || "",
                 layers: finalLayers, // Pass the layers (Manual or Injected)
@@ -64,12 +66,20 @@ export class JobProcessor {
                 duration: job.input.duration || 10,
                 settings: {
                     ...(job.input.settings || {}),
-                    instrumentalOnly: job.input.settings?.instrumentalOnly
+                    instrumentalOnly: job.input.settings?.instrumentalOnly,
+                    // Pass System 1/2 context if supported
+                    intelligence_layer: decision.system
                 }
             });
 
+            // Enrich Metadata with Orchestrator Context
+            if (!result.metadata) result.metadata = {};
+            result.metadata.intelligence_layer = decision.system;
+            result.metadata.provider = targetProvider;
+            result.metadata.orchestrator_reasoning = decision.reasoning;
+
             const durationMs = Date.now() - startTime;
-            console.log(`[JobProcessor] Job ${jobId} Completed in ${durationMs}ms`);
+            console.log(`[JobProcessor] Job ${jobId} Completed in ${durationMs}ms via ${decision.system?.toUpperCase()} Layer`);
 
             // 5. SUCCESS & LEARNING
             JobStore.update(jobId, {

@@ -4,7 +4,7 @@ import path from "path";
 import { Synapse } from "@/lib/orchestrator/synapse";
 
 const STUDIO_OUTPUTS = path.join(process.env.HOME || "", "SonicStudio", "outputs");
-const CASSINI_ARCHIVE = path.join(process.env.HOME || "", "CrimsonCassini", "archive", "favorites");
+const CASSINI_ARCHIVE = path.join(process.env.HOME || "", "CrimsonCassini", "archive", "masters");
 
 // Ensure Archive Exists
 if (!fs.existsSync(CASSINI_ARCHIVE)) {
@@ -13,6 +13,7 @@ if (!fs.existsSync(CASSINI_ARCHIVE)) {
 
 export async function POST(req: Request) {
     try {
+        // "Masters" implies a curated selection.
         const { filename, prompt } = await req.json();
         if (!filename) return NextResponse.json({ error: "Filename required" }, { status: 400 });
 
