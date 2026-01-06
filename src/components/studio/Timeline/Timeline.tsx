@@ -97,10 +97,26 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
         updateSegment(segmentId, { layers: segment.layers.filter(l => l.id !== layerId) });
     };
 
+    const moveSegment = (index: number, direction: 'left' | 'right') => {
+        if (direction === 'left' && index > 0) {
+            const newSegments = [...segments];
+            const temp = newSegments[index];
+            newSegments[index] = newSegments[index - 1];
+            newSegments[index - 1] = temp;
+            setSegments(newSegments);
+        } else if (direction === 'right' && index < segments.length - 1) {
+            const newSegments = [...segments];
+            const temp = newSegments[index];
+            newSegments[index] = newSegments[index + 1];
+            newSegments[index + 1] = temp;
+            setSegments(newSegments);
+        }
+    };
+
     return (
         <div className="flex h-full w-full overflow-x-auto p-4 gap-4">
             <AnimatePresence mode="popLayout">
-                {segments.map((segment) => (
+                {segments.map((segment, index) => (
                     <motion.div
                         key={segment.id}
                         layout
@@ -112,9 +128,28 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
                     >
                         {/* Header / Title */}
                         <div className="p-3 border-b border-white/5 flex items-center justify-between">
-                            <span className={`text-[10px] font-black uppercase tracking-widest text-${segment.color}-400`}>
-                                {segment.type}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest text-${segment.color}-400`}>
+                                    {segment.type}
+                                </span>
+                                {/* Reordering Controls */}
+                                <div className="flex gap-0.5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => moveSegment(index, 'left')}
+                                        disabled={index === 0}
+                                        className="p-0.5 rounded hover:bg-white/10 text-neutral-600 hover:text-white disabled:opacity-30"
+                                    >
+                                        <ChevronRight className="w-3 h-3 rotate-180" />
+                                    </button>
+                                    <button
+                                        onClick={() => moveSegment(index, 'right')}
+                                        disabled={index === segments.length - 1}
+                                        className="p-0.5 rounded hover:bg-white/10 text-neutral-600 hover:text-white disabled:opacity-30"
+                                    >
+                                        <ChevronRight className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
                             <span className="text-[9px] font-mono text-neutral-600">
                                 {segment.duration}s
                             </span>
@@ -365,11 +400,41 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
             </AnimatePresence>
 
             {segments.length === 0 && (
-                <div className="w-full flex flex-col items-center justify-center text-neutral-700 space-y-2 border-2 border-dashed border-white/5 rounded-2xl">
+                <div className="w-64 flex-none flex flex-col items-center justify-center text-neutral-700 space-y-2 border-2 border-dashed border-white/5 rounded-2xl p-8">
                     <span className="text-xs font-mono uppercase">Timeline Empty</span>
                     <span className="text-[9px]">Add a block to begin structure</span>
                 </div>
             )}
+
+            {/* Add Block Card */}
+            <div className="w-64 flex-none flex flex-col gap-4 bg-[#0a0a0a] border border-white/5 rounded-xl p-4 items-center justify-center opacity-50 hover:opacity-100 transition-opacity">
+                <div className="flex flex-col gap-2 w-full">
+                    <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest text-center mb-2">Append Sector</span>
+                    <div className="grid grid-cols-2 gap-2">
+                        {SEGMENT_TYPES.map(t => (
+                            <button
+                                key={t.type}
+                                onClick={() => setSelectedType(t)}
+                                className={`px-2 py-2 rounded border text-[9px] uppercase tracking-wider font-bold transition-all
+                                    ${selectedType.type === t.type
+                                        ? `border-${t.color}-500/50 bg-${t.color}-500/10 text-${t.color}-400`
+                                        : "border-transparent bg-white/5 text-neutral-600 hover:bg-white/10"
+                                    }
+                                `}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <button
+                    onClick={addSegment}
+                    className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-500 hover:text-white transition-all border border-white/5 hover:border-white/20 group"
+                >
+                    <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </button>
+            </div>
         </div>
     );
 }
