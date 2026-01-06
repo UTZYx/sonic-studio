@@ -11,7 +11,8 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
     const count = 128;
     const dummy = useMemo(() => new THREE.Object3D(), []);
     const dataArray = useMemo(() => new Uint8Array(256), []);
-    // ⚡ Bolt: Reuse color object to avoid GC pressure in loop (saves ~7680 allocations/sec)
+    // ⚡ Bolt: Reuse color object to avoid GC pressure in loop (saves ~7680 allocations/sec).
+    // Safe for InstancedMesh because setColorAt copies values (doesn't hold reference).
     const tempColor = useMemo(() => new THREE.Color(), []);
 
     useFrame((state) => {
