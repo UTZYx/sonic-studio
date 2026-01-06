@@ -3,9 +3,10 @@ import io
 import torch
 import uvicorn
 import gc
+import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
 from audiocraft.models import MusicGen, AudioGen
 import torchaudio
@@ -16,6 +17,10 @@ PORT = int(os.getenv("PORT", 8000))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 app = FastAPI(title="Sonic Studio Neural Bridge")
+
+# GPU Concurrency Guard (Resilience Channel)
+# Ensures we never crash the VRAM with concurrent requests.
+gpu_lock = asyncio.Lock()
 
 # CORS for Localhost Studio
 app.add_middleware(
@@ -86,109 +91,126 @@ async def health_check():
         "vram_allocated": f"{torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB" if torch.cuda.is_available() else "0 MB"
     }
 
+# Offload blocking generation to a separate thread to keep the event loop responsive
+def run_generation(req: GenerationRequest, model):
+    # Normalize Layers
+    layers: list[LayerConfig] = []
+    if req.layers:
+        for l in req.layers:
+            layers.append(LayerConfig(prompt=l) if isinstance(l, str) else l)
+    else:
+        layers.append(LayerConfig(prompt=req.prompt))
+
+    prompts = [l.prompt for l in layers]
+    is_field = len(layers) > 1
+
+    print(f"[Neural Bridge] Igniting {req.type.upper()}: {len(layers)} layers ({req.duration}s)...")
+    if is_field:
+        print(f"Field Composition: {[l.prompt for l in layers]}")
+
+    # Configure
+    model.set_generation_params(
+        duration=req.duration,
+        top_k=req.top_k,
+        temperature=req.temperature
+    )
+
+    # Generate (Blocking GPU op)
+    if req.audio_context:
+            # Decode Base64 Context (Logic same as before, but batched if necessary)
+            import base64
+            audio_bytes = base64.b64decode(req.audio_context.split(",")[1])
+            wav_context, sr = torchaudio.load(io.BytesIO(audio_bytes))
+            wav_context = wav_context.to(DEVICE)
+
+            # Expand context to batch size if Field Composition
+            if wav_context.dim() == 2:
+                wav_context = wav_context.unsqueeze(0) # [1, C, T]
+            if is_field:
+                wav_context = wav_context.repeat(len(prompts), 1, 1) # [N, C, T]
+
+            wav = model.generate_continuation(wav_context, model.sample_rate, prompts, progress=True)
+    else:
+        wav = model.generate(prompts, progress=True)
+
+    # Post-Processing: Mix or Single
+    # wav shape is [Batch, Channels, Time]
+
+    if is_field:
+        print("Mixing Field Layers (Spectral Fusion)...")
+        mixed_buffer = torch.zeros_like(wav[0]) # [C, T] assuming all same length
+
+        for i, layer_wav in enumerate(wav):
+            # layer_wav is [C, T]
+            cfg = layers[i]
+
+            # Apply Volume
+            layer_wav = layer_wav * cfg.volume
+
+            # Apply Pan (Simple Stereo Panning)
+            # Assumes model emits Stereo (2 channels). If Mono, expand.
+            if layer_wav.shape[0] == 1:
+                layer_wav = layer_wav.repeat(2, 1)
+
+            # Simple Linear for Speed:
+            # pan element is -1 to 1.
+            # Let's use the straightforward "Balance" control style:
+            left_gain = 1.0 if cfg.pan <= 0 else (1.0 - cfg.pan)
+            right_gain = 1.0 if cfg.pan >= 0 else (1.0 + cfg.pan)
+
+            layer_wav[0] *= left_gain
+            layer_wav[1] *= right_gain
+
+            mixed_buffer += layer_wav
+
+        mixed = mixed_buffer
+
+        # Simple Peak Normalization to -1dB to prevent clip
+        max_val = torch.abs(mixed).max()
+        if max_val > 0.9:
+            mixed = mixed / (max_val + 1e-6) * 0.9
+
+        wav_cpu = mixed.cpu()
+    else:
+        wav_cpu = wav[0].cpu() # Single batch
+
+    # Use Torchaudio to save to buffer
+    # Use Scipy for robust WAV encoding (Avoids AV/FFmpeg issues)
+
+    # wav_cpu is [Channels, Time] -> need [Time, Channels] for Scipy
+    audio_np = wav_cpu.numpy().T
+
+    buff = io.BytesIO()
+    scipy.io.wavfile.write(buff, 32000, audio_np)
+    buff.seek(0)
+
+    return buff.read()
+
 @app.post("/generate")
 async def generate(req: GenerationRequest):
-    model = manager.get_model(req.type, req.size)
-    if not model:
-        raise HTTPException(status_code=503, detail="Neural Engine failed to load model")
-
-    try:
-        # Normalize Layers
-        layers: list[LayerConfig] = []
-        if req.layers:
-            for l in req.layers:
-                layers.append(LayerConfig(prompt=l) if isinstance(l, str) else l)
-        else:
-            layers.append(LayerConfig(prompt=req.prompt))
-
-        prompts = [l.prompt for l in layers]
-        is_field = len(layers) > 1
-
-        print(f"[Neural Bridge] Igniting {req.type.upper()}: {len(layers)} layers ({req.duration}s)...")
-        if is_field: 
-            print(f"Field Composition: {[l.prompt for l in layers]}")
-
-        # Configure
-        model.set_generation_params(
-            duration=req.duration,
-            top_k=req.top_k,
-            temperature=req.temperature
+    # Non-blocking check: If GPU is busy, fail fast so client can retry or queue UI-side.
+    if gpu_lock.locked():
+        return JSONResponse(
+            status_code=503,
+            content={"error": "GPU Busy", "detail": "Neural Engine is currently generating. Please retry in a moment."}
         )
 
-        # Generate (Blocking GPU op)
-        if req.audio_context:
-             # Decode Base64 Context (Logic same as before, but batched if necessary)
-             import base64
-             audio_bytes = base64.b64decode(req.audio_context.split(",")[1])
-             wav_context, sr = torchaudio.load(io.BytesIO(audio_bytes))
-             wav_context = wav_context.to(DEVICE)
-             
-             # Expand context to batch size if Field Composition
-             if wav_context.dim() == 2:
-                 wav_context = wav_context.unsqueeze(0) # [1, C, T]
-             if is_field:
-                 wav_context = wav_context.repeat(len(prompts), 1, 1) # [N, C, T]
+    async with gpu_lock:
+        model = manager.get_model(req.type, req.size)
+        if not model:
+            raise HTTPException(status_code=503, detail="Neural Engine failed to load model")
 
-             wav = model.generate_continuation(wav_context, model.sample_rate, prompts, progress=True)
-        else:
-            wav = model.generate(prompts, progress=True) 
-        
-        # Post-Processing: Mix or Single
-        # wav shape is [Batch, Channels, Time]
-        
-        if is_field:
-            print("Mixing Field Layers (Spectral Fusion)...")
-            mixed_buffer = torch.zeros_like(wav[0]) # [C, T] assuming all same length
-
-            for i, layer_wav in enumerate(wav):
-                # layer_wav is [C, T]
-                cfg = layers[i]
-                
-                # Apply Volume
-                layer_wav = layer_wav * cfg.volume
-                
-                # Apply Pan (Simple Stereo Panning)
-                # Assumes model emits Stereo (2 channels). If Mono, expand.
-                if layer_wav.shape[0] == 1:
-                    layer_wav = layer_wav.repeat(2, 1)
-
-                # Simple Linear for Speed:
-                # pan element is -1 to 1.
-                # Let's use the straightforward "Balance" control style:
-                left_gain = 1.0 if cfg.pan <= 0 else (1.0 - cfg.pan)
-                right_gain = 1.0 if cfg.pan >= 0 else (1.0 + cfg.pan)
-                
-                layer_wav[0] *= left_gain
-                layer_wav[1] *= right_gain
-                
-                mixed_buffer += layer_wav
-
-            mixed = mixed_buffer
+        try:
+            # Offload the blocking generation to a thread
+            # This ensures the main loop stays free to handle incoming 'lock checks' from other clients
+            loop = asyncio.get_running_loop()
+            audio_bytes = await loop.run_in_executor(None, run_generation, req, model)
             
-            # Simple Peak Normalization to -1dB to prevent clip
-            max_val = torch.abs(mixed).max()
-            if max_val > 0.9:
-                mixed = mixed / (max_val + 1e-6) * 0.9
-            
-            wav_cpu = mixed.cpu()
-        else:
-            wav_cpu = wav[0].cpu() # Single batch
-        
-        # Use Torchaudio to save to buffer
-        # Use Scipy for robust WAV encoding (Avoids AV/FFmpeg issues)
-        
-        # wav_cpu is [Channels, Time] -> need [Time, Channels] for Scipy
-        audio_np = wav_cpu.numpy().T
-        
-        buff = io.BytesIO()
-        scipy.io.wavfile.write(buff, 32000, audio_np)
-        buff.seek(0)
-        
-        return Response(content=buff.read(), media_type="audio/wav")
+            return Response(content=audio_bytes, media_type="audio/wav")
 
-    except Exception as e:
-        print(f"[Neural Bridge] Generation Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        except Exception as e:
+            print(f"[Neural Bridge] Generation Error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)
