@@ -16,7 +16,7 @@ export function ParameterInspector({ activeParam }: ParameterInspectorProps) {
     return (
         <div className="h-24 bg-black/40 rounded-2xl border border-white/5 p-4 relative overflow-hidden flex items-center">
              {/* Background Tech */}
-             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none" />
+             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48ZmlsdGVyIGlkPSJnoiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjUiIG51bU9jdGF2ZXM9IjEiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjZykiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')] opacity-5 pointer-events-none" />
              <div className="absolute right-0 top-0 p-4 opacity-10">
                 <Cpu className="w-16 h-16 text-white rotate-12" />
              </div>
