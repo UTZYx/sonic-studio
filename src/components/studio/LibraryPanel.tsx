@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, Trash2, Download, Music, Box, Star } from "lucide-react";
+import { Play, Pause, Trash2, Download, Music, Box, Star, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SpatialCard } from "./SpatialCard";
 import { useLog } from "@/lib/logs/context";
+import { Visualizer } from "./Visualizer";
 
 interface AudioFile {
     name: string;
@@ -20,8 +21,37 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const [files, setFiles] = useState<AudioFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [playingFile, setPlayingFile] = useState<string | null>(null);
+
+    // Web Audio API Refs
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
+
     const { addLog } = useLog();
+
+    // Initialize Audio Context on Interaction (System 1)
+    const initAudioContext = () => {
+        if (!audioContextRef.current && audioRef.current) {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            const ctx = new AudioContext();
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 256;
+
+            const source = ctx.createMediaElementSource(audioRef.current);
+            source.connect(analyser);
+            analyser.connect(ctx.destination);
+
+            audioContextRef.current = ctx;
+            sourceRef.current = source;
+            analyserRef.current = analyser;
+            setAnalyserNode(analyser); // Trigger re-render for Visualizer
+            addLog("[System 1] Reflex Audio Engine Ignited.");
+        } else if (audioContextRef.current?.state === 'suspended') {
+            audioContextRef.current.resume();
+        }
+    };
 
     const fetchLibrary = async () => {
         try {
@@ -55,6 +85,8 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     }, [refreshKey]);
 
     const handlePlay = (url: string) => {
+        initAudioContext(); // Ensure Context is ready
+
         if (playingFile === url) {
             audioRef.current?.pause();
             setPlayingFile(null);
@@ -95,6 +127,14 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                         <p className="text-[9px] font-mono text-neutral-600 uppercase tracking-[0.2em] mt-1">Local Storage: ~/SonicStudio/outputs</p>
                     </div>
                 </div>
+
+                {/* Global Visualizer (System 1) */}
+                {playingFile && (
+                    <div className="flex-1 mx-8 hidden md:block">
+                         <Visualizer analyser={analyserNode} />
+                    </div>
+                )}
+
                 <div className="text-right">
                     <span className="text-[10px] font-bold text-neutral-500 bg-white/5 px-4 py-1.5 rounded-full border border-white/5 uppercase tracking-widest">
                         {files.length} FRAGMENTS
@@ -183,16 +223,9 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                         </button>
                                     </div>
 
-                                    {/* Visualizer Bar (Fake for now) */}
+                                    {/* Visualizer Bar (Active) */}
                                     {playingFile === file.url && (
-                                        <div className="absolute bottom-0 left-0 w-full h-1 bg-cyan-500/20 overflow-hidden rounded-b-xl">
-                                            <motion.div
-                                                className="h-full bg-cyan-400 blur-[2px]"
-                                                initial={{ width: "0%" }}
-                                                animate={{ width: "100%" }}
-                                                transition={{ duration: 10, ease: "linear", repeat: Infinity }}
-                                            />
-                                        </div>
+                                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.8)] animate-pulse" />
                                     )}
                                 </div>
                             </motion.div>
