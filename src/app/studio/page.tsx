@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";
@@ -99,7 +99,10 @@ export default function StudioPage() {
     const sequencerRef = useRef<SequenceEngine | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
 
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    // Stabilized logger
+    const addLog = useCallback((msg: string) => {
+        setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    }, []);
 
     // Init Sequencer
     useEffect(() => {
@@ -243,12 +246,20 @@ export default function StudioPage() {
         }
     };
 
+    // Controlled Polling with AbortController and Terminal States
     useEffect(() => {
         if (!pollingJobId || status === "completed" || status === "failed") return;
 
-        const interval = setInterval(async () => {
+        const controller = new AbortController();
+        let timeoutId: NodeJS.Timeout;
+
+        const poll = async () => {
             try {
-                const res = await fetch(`/api/audio/jobs/${pollingJobId}`);
+                const res = await fetch(`/api/audio/jobs/${pollingJobId}`, {
+                    signal: controller.signal
+                });
+                if (!res.ok) throw new Error("Poll failed");
+
                 const job = await res.json();
 
                 if (job.status !== status) {
@@ -270,21 +281,35 @@ export default function StudioPage() {
                         setMusicTrackUrl(job.result.url);
                         addLog("Music Track Ready -> Mixer Ch 2");
                     }
-                    setPollingJobId(null);
+                    setPollingJobId(null); // Stop polling immediately
+                    return;
                 }
 
                 if (job.status === "failed") {
                     addLog(`Job Failed: ${job.error}`);
-                    setPollingJobId(null);
+                    setPollingJobId(null); // Stop polling immediately
+                    return;
                 }
 
-            } catch (e) {
-                // ignore
-            }
-        }, 1000);
+                // Exponential backoff or simple delay?
+                // Keeping simple 1s for now, but via timeout loop instead of interval to prevent overlap
+                timeoutId = setTimeout(poll, 1000);
 
-        return () => clearInterval(interval);
-    }, [pollingJobId, status, addLog, provider]);
+            } catch (e: any) {
+                if (e.name !== "AbortError") {
+                    // Retry after delay even on error
+                    timeoutId = setTimeout(poll, 2000);
+                }
+            }
+        };
+
+        poll();
+
+        return () => {
+            controller.abort();
+            clearTimeout(timeoutId);
+        };
+    }, [pollingJobId, status, addLog, provider]); // Re-runs if status changes, effectively "stepping" through states
 
     return (
         <LogContext.Provider value={{ addLog }}>
