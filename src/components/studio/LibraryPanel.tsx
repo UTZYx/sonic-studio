@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, Trash2, Download, Music, Box, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SpatialCard } from "./SpatialCard";
@@ -23,7 +23,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const { addLog } = useLog();
 
-    const fetchLibrary = async () => {
+    const fetchLibrary = useCallback(async () => {
         try {
             setLoading(true);
             const res = await fetch("/api/audio/masters");
@@ -48,11 +48,11 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [addLog]);
 
     useEffect(() => {
         fetchLibrary();
-    }, [refreshKey]);
+    }, [refreshKey, fetchLibrary]);
 
     const handlePlay = (url: string) => {
         if (playingFile === url) {
