@@ -44,8 +44,8 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
                         if (n.id === 'music') {
                             return {
                                 ...n,
-                                status: `VRAM: ${data.vram_allocated || 'Active'}`,
-                                load: data.active_model ? 85 : 10
+                                status: data.busy ? "GENERATING..." : `VRAM: ${data.vram_allocated || 'Active'}`,
+                                load: data.busy ? 98 : (data.active_model ? 40 : 10)
                             };
                         }
                         if (n.id === 'sfx') {

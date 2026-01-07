@@ -3,8 +3,9 @@ import { AudioProvider, AudioGenerationType, GenerationInput, GenerationResult }
 import { v4 as uuidv4 } from "uuid";
 
 /**
- * HuggingFace Client for MusicGen (Free/Pro Tier)
- * A cost-effective alternative for the 'Sonic Grid'.
+ * Neural Bridge Client (formerly HuggingFace Client)
+ * Connects to the Local Neural Bridge (Python/FastAPI) running on Port 8000.
+ * Supports: MusicGen, AudioGen, Bark, Resemble Enhance.
  */
 export class HuggingFaceClient implements AudioProvider {
     private readonly apiKey: string;
@@ -14,7 +15,7 @@ export class HuggingFaceClient implements AudioProvider {
 
     constructor(apiKey?: string) {
         this.apiKey = apiKey || process.env.HUGGINGFACE_API_KEY || "";
-        if (!this.apiKey) console.warn("[HuggingFace] No API Key found. Rate limits will be strict.");
+        // if (!this.apiKey) console.warn("[HuggingFace] No API Key found. Rate limits will be strict.");
     }
 
     private async checkLocalBridge(): Promise<boolean> {
@@ -30,26 +31,28 @@ export class HuggingFaceClient implements AudioProvider {
     }
 
     async generate(type: AudioGenerationType, input: GenerationInput): Promise<GenerationResult> {
-        // 1. Check Local Bridge (RTX 4060)
+        // 1. Check Local Bridge
         const isLocal = await this.checkLocalBridge();
 
         if (isLocal) {
-            console.log(`[Neural Bridge] Routing ${type.toUpperCase()} to Local GPU (High Fidelity)...`);
+            console.log(`[Neural Bridge] Routing ${type.toUpperCase()} to Local Neural Engine...`);
             return this.generateLocal(type, input);
         }
 
-        // 2. Fallback to Cloud (Only Music for now)
-        if (type !== "music") {
-            throw new Error(`Cloud fallback only supports 'music'. Local bridge is offline for: ${type}`);
+        // 2. Fallback to Cloud (Only Music for now via HF Inference)
+        if (type === "music") {
+             console.log("[Neural Bridge] Offline. Igniting Cloud MusicGen (Free Tier)...");
+             return this.generateCloud(input);
         }
 
-        console.log("[HuggingFace] Local Bridge Offline. Igniting Cloud MusicGen (Free Tier)...");
-        return this.generateCloud(input);
+        throw new Error(`Local Neural Bridge is Offline. Cannot generate ${type}. Please run 'python server/neural_bridge.py'.`);
     }
 
     private async generateLocal(type: AudioGenerationType, input: GenerationInput): Promise<GenerationResult> {
         // Map types to bridge models
-        const bridgeType = type === "music" ? "music" : "sfx";
+        // Frontend uses "tts" legacy, backend wants "voice"
+        let bridgeType = type;
+        if (type === "tts") bridgeType = "voice";
 
         const response = await fetch(`${this.localBridgeUrl}/generate`, {
             method: "POST",
@@ -60,7 +63,10 @@ export class HuggingFaceClient implements AudioProvider {
                 size: input.settings?.size || "small", // Default to small for speed
                 layers: input.layers,
                 duration: input.duration || 10,
-                audio_context: input.settings?.audioContext
+                audio_context: input.settings?.audioContext,
+                enhance: input.settings?.enhance ?? true, // Default to True (Great Sound)
+                top_k: 250,
+                temperature: input.settings?.warmth || 1.0
             }),
         });
 
@@ -70,7 +76,7 @@ export class HuggingFaceClient implements AudioProvider {
         }
 
         const blob = await response.blob();
-        return this.blobToResult(blob, "local-gpu", `${bridgeType}-medium`);
+        return this.blobToResult(blob, "local-neural-bridge", `${bridgeType}-enhanced`);
     }
 
     private async generateCloud(input: GenerationInput): Promise<GenerationResult> {
@@ -95,10 +101,7 @@ export class HuggingFaceClient implements AudioProvider {
     private async blobToResult(blob: Blob, provider: string, model: string): Promise<GenerationResult> {
         const buffer = Buffer.from(await blob.arrayBuffer());
         const base64 = buffer.toString("base64");
-        // MusicGen outputs can be WAV or FLAC depending on pipe. Cloud is often flac check.
-        // Local is WAV. We'll standardise in meta but the data uri needs correct type 
-        // We'll inspect or assume based on provider.
-        const type = provider === "local-gpu" ? "audio/wav" : "audio/flac";
+        const type = "audio/wav"; // Standardize on WAV
         const url = `data:${type};base64,${base64}`;
 
         return {

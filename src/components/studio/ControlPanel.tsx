@@ -22,9 +22,11 @@ interface ControlPanelProps {
     setDuration: (v: number) => void;
     instrumentalOnly?: boolean;
     setInstrumentalOnly?: (v: boolean) => void;
+    enhance?: boolean;
+    setEnhance?: (v: boolean) => void;
 }
 
-export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
+export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly, enhance, setEnhance }: ControlPanelProps) {
     const isGenerating = status === "submitting" || status === "processing" || status === "queued";
 
     return (
@@ -55,10 +57,28 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             </button>
                         )}
 
+                        {/* Enhance Toggle (New) */}
+                        {setEnhance && (
+                             <button
+                                onClick={() => setEnhance(!enhance)}
+                                className={`
+                                    mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border transition-all
+                                    ${enhance
+                                        ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
+                                        : "bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400"
+                                    }
+                                `}
+                                title="Resemble Enhance: Denoise & Upscale"
+                            >
+                                <span className={`w-1.5 h-1.5 rounded-full ${enhance ? "bg-purple-400 animate-pulse" : "bg-neutral-700"}`} />
+                                <span className="text-[8px] font-bold uppercase tracking-widest">Enhance</span>
+                            </button>
+                        )}
+
                         <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between px-1">
                             <span className="text-[8px] font-mono text-neutral-600 uppercase">Provider</span>
                             <span className={`text-[8px] font-mono font-bold uppercase ${mode === "music" ? "text-green-400" : "text-amber-500"}`}>
-                                {mode === "music" ? "HF (Free)" : "11Labs ($)"}
+                                {mode === "music" ? "HF (Free)" : "Local Bridge"}
                             </span>
                         </div>
                     </div>
@@ -187,6 +207,7 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                                 ? "bg-black/40 text-neutral-700 cursor-not-allowed"
                                 : "bg-neutral-900 text-white hover:scale-[1.02] hover:border-white/30"
                             }
+                            ${!isGenerating && "animate-pulse shadow-[0_0_30px_rgba(255,255,255,0.05)]"}
                         `}
                     >
                         {!isGenerating && (

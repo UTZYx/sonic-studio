@@ -8,11 +8,18 @@ export async function GET(req: Request, { params }: { params: { filename: string
     const filename = params.filename;
     if (!filename) return new NextResponse("Filename required", { status: 400 });
 
-    const filePath = path.join(OUTPUTS_DIR, filename);
+    const resolvedPath = path.resolve(OUTPUTS_DIR, filename);
 
-    if (!fs.existsSync(filePath)) {
+    // Security Check: Path Traversal Prevention
+    if (!resolvedPath.startsWith(OUTPUTS_DIR + path.sep)) {
+        return new NextResponse("Forbidden", { status: 403 });
+    }
+
+    if (!fs.existsSync(resolvedPath)) {
         return new NextResponse("File not found", { status: 404 });
     }
+
+    const filePath = resolvedPath;
 
     const fileBuffer = fs.readFileSync(filePath);
     const stats = fs.statSync(filePath);
