@@ -71,6 +71,12 @@ export function Knob({
                 className="relative flex items-center justify-center cursor-ns-resize"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                role="slider"
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-label={label}
+                tabIndex={0}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
