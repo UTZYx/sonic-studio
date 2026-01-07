@@ -72,6 +72,12 @@ export function Fader({
                 className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize"
                 style={{ height }}
                 onMouseDown={handleMouseDown}
+                role="slider"
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-label={label}
+                tabIndex={0}
             >
                 {/* Center Line */}
                 <div className="absolute top-2 bottom-2 w-[1px] bg-neutral-800"></div>
