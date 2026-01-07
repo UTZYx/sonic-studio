@@ -11,6 +11,8 @@ interface KnobProps {
     label?: string;
     size?: number;
     color?: "cyan" | "purple" | "white" | "pink";
+    onInteractionStart?: () => void;
+    onInteractionEnd?: () => void;
 }
 
 export function Knob({
@@ -20,7 +22,9 @@ export function Knob({
     onChange,
     label,
     size = 64,
-    color = "cyan"
+    color = "cyan",
+    onInteractionStart,
+    onInteractionEnd
 }: KnobProps) {
     const [isDragging, setIsDragging] = useState(false);
     const startY = useRef<number>(0);
@@ -32,6 +36,7 @@ export function Knob({
 
     const handleMouseDown = (e: React.MouseEvent) => {
         setIsDragging(true);
+        if (onInteractionStart) onInteractionStart();
         startY.current = e.clientY;
         startVal.current = value;
         document.body.style.cursor = "ns-resize";
@@ -53,6 +58,7 @@ export function Knob({
 
     const handleMouseUp = () => {
         setIsDragging(false);
+        if (onInteractionEnd) onInteractionEnd();
         document.body.style.cursor = "default";
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
@@ -66,7 +72,11 @@ export function Knob({
     };
 
     return (
-        <div className="flex flex-col items-center gap-2 group select-none">
+        <div
+            className="flex flex-col items-center gap-2 group select-none"
+            onMouseEnter={onInteractionStart}
+            onMouseLeave={() => !isDragging && onInteractionEnd && onInteractionEnd()}
+        >
             <div
                 className="relative flex items-center justify-center cursor-ns-resize"
                 style={{ width: size, height: size }}

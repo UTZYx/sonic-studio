@@ -227,6 +227,8 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
                     <button
                         onClick={() => onSave(jobId, label.includes("Voice") ? "Voice" : "Music")}
                         className="p-2 rounded-lg hover:bg-white/10 text-neutral-600 hover:text-white transition-all"
+                        aria-label="Save to Library"
+                        title="Save to Library"
                     >
                         <Save className="w-4 h-4" />
                     </button>
@@ -275,6 +277,7 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
                         <button
                             onClick={togglePlay}
                             disabled={loading || (!voiceBuffer && !musicBuffer)}
+                            aria-label={isPlaying ? "Stop" : "Play"}
                             className={`
                                 relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-700
                                 ${isPlaying ? "bg-red-500/10 border border-red-500/30 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.1)]" : "bg-white text-black shadow-xl hover:scale-105"}
@@ -290,6 +293,7 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
                             disabled={loading || (!voiceBuffer && !musicBuffer)}
                             className="w-16 h-16 rounded-full flex items-center justify-center border border-whit/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-400 transition-all disabled:opacity-20 group"
                             title="Bounce Mix to Wav"
+                            aria-label="Bounce Mix to Wav"
                         >
                             <Layers className="w-6 h-6 group-hover:scale-110 transition-transform" />
                         </button>

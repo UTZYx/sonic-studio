@@ -1,8 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Activity, ShieldCheck, Zap, Ghost, Database } from "lucide-react";
-import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Activity, ShieldCheck, Zap, Ghost, Database, Cpu } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
 
 interface NodeState {
     id: string;
@@ -10,6 +10,9 @@ interface NodeState {
     status: string;
     load: number;
     icon: any;
+    x: number;
+    y: number;
+    color: string;
 }
 
 interface NeuralNodeMonitorProps {
@@ -18,15 +21,16 @@ interface NeuralNodeMonitorProps {
     provider?: "local-gpu" | "cloud-eleven" | "cloud-hf";
 }
 
+// Coordinate System for 400x300 SVG
+const CENTER = { x: 200, y: 150 };
+
 export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMonitorProps) {
     const [nodes, setNodes] = useState<NodeState[]>([
-        { id: "core", name: "CORe", status: "active", load: 12, icon: Activity },
-        { id: "voice", name: "VOX-NET", status: "idle", load: 0, icon: Activity },
-        { id: "music", name: "SONIC-GRID", status: "idle", load: 0, icon: Zap },
-        { id: "orchestra", name: "ORCHESTRA", status: "OFFLINE", load: 0, icon: ShieldCheck },
-        { id: "sfx", name: "MATTER-GEN", status: "idle", load: 0, icon: Ghost },
-        // { id: "guard", name: "GUARD", status: "active", load: 2, icon: ShieldCheck },
-        { id: "archive", name: "ARCHIVE", status: "idle", load: 0, icon: Database },
+        { id: "core", name: "CORe", status: "active", load: 12, icon: Cpu, x: CENTER.x, y: CENTER.y, color: "text-white" },
+        { id: "voice", name: "VOX", status: "idle", load: 0, icon: Activity, x: 100, y: 80, color: "text-cyan-400" },
+        { id: "music", name: "GRID", status: "idle", load: 0, icon: Zap, x: 300, y: 80, color: "text-purple-400" },
+        { id: "sfx", name: "MATTER", status: "idle", load: 0, icon: Ghost, x: 100, y: 220, color: "text-emerald-400" },
+        { id: "archive", name: "MEM", status: "idle", load: 0, icon: Database, x: 300, y: 220, color: "text-yellow-400" },
     ]);
 
     // Live Neural Bridge Connection
@@ -34,6 +38,7 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
         let interval: NodeJS.Timeout;
 
         const checkBridge = async () => {
+            // Local GPU Logic
             if (activeNode === 'music' && provider === 'local-gpu') {
                 try {
                     const res = await fetch("http://localhost:8000/health");
@@ -55,34 +60,45 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
                                 load: data.active_model === 'sfx' ? 85 : 0
                             };
                         }
+                        if (n.id === 'core') return { ...n, load: 45 }; // Core active during generation
                         return n;
                     }));
                 } catch (e) {
                     setNodes(prev => prev.map(n => {
-                        if (n.id === 'music') {
-                            return { ...n, status: "OFFLINE", load: 0 };
-                        }
+                        if (n.id === 'music') return { ...n, status: "OFFLINE", load: 0 };
                         return n;
                     }));
                 }
             } else {
-                // Simulation Fallback for other modes
+                // Simulation Logic
                 setNodes(prev => prev.map(node => {
-                    if (node.id === activeNode) {
-                        return { ...node, status: "active", load: Math.floor(Math.random() * 30) + 60 };
+                    const isActive = node.id === activeNode;
+
+                    if (node.id === "core") {
+                        // Core is always humming, more if active
+                        return { ...node, load: activeNode !== 'idle' ? 65 : 15 };
                     }
-                    if (node.id === "core") return { ...node, load: Math.floor(Math.random() * 20) + 10 };
-                    return { ...node, status: "idle", load: 0 };
+
+                    if (isActive) {
+                        return { ...node, status: "ACTIVE", load: Math.floor(Math.random() * 20) + 70 };
+                    }
+
+                    // Archive occasionally pulses
+                    if (node.id === 'archive' && Math.random() > 0.9) {
+                         return { ...node, load: 30 };
+                    }
+
+                    return { ...node, status: "IDLE", load: 0 };
                 }));
             }
         };
 
         if (activeNode === 'music' && provider === 'local-gpu') {
-            checkBridge(); // Initial check
-            interval = setInterval(checkBridge, 2000); // Poll every 2s
-        } else {
-            // Run simulation logic once
             checkBridge();
+            interval = setInterval(checkBridge, 2000);
+        } else {
+            checkBridge();
+            interval = setInterval(checkBridge, 1000); // Simulate faster
         }
 
         return () => clearInterval(interval);
@@ -90,6 +106,15 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
 
     // Synapse Memory
     const [synapseTop3, setSynapseTop3] = useState<string[]>([]);
+    const [vram, setVram] = useState<string>("0 MB");
+
+    useEffect(() => {
+        // Extract VRAM from music node status for footer
+        const musicNode = nodes.find(n => n.id === 'music');
+        if (musicNode && musicNode.status.startsWith("VRAM")) {
+            setVram(musicNode.status.split(": ")[1]);
+        }
+    }, [nodes]);
 
     useEffect(() => {
         const fetchSynapse = async () => {
@@ -97,7 +122,6 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
                 const res = await fetch("/api/synapse/weights");
                 const data = await res.json();
                 if (data.memory && data.memory.genres) {
-                    // Sort genres by weight
                     const sorted = Object.entries(data.memory.genres)
                         .sort(([, a], [, b]) => (b as number) - (a as number))
                         .slice(0, 3)
@@ -105,18 +129,20 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
                     setSynapseTop3(sorted);
                 }
             } catch (e) {
-                console.error("Synapse Fetch Error", e);
+                // console.error("Synapse Fetch Error", e);
             }
         };
         fetchSynapse();
-        // Poll infrequently
-        const interval = setInterval(fetchSynapse, 5000);
-        return () => clearInterval(interval);
     }, []);
 
+    // SVG Rendering Helper
+    const core = nodes.find(n => n.id === "core")!;
+    const satellites = nodes.filter(n => n.id !== "core");
+
     return (
-        <div className="p-8 space-y-8">
-            <div className="flex items-center justify-between">
+        <div className="h-full flex flex-col p-6 space-y-6 relative overflow-hidden">
+             {/* Header */}
+             <div className="flex items-center justify-between z-10 relative">
                 <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${activeNode !== 'idle' ? 'bg-purple-400 animate-ping' : 'bg-cyan-400 animate-pulse'}`} />
                     <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Neural Node Monitor</h3>
@@ -124,65 +150,110 @@ export function NeuralNodeMonitor({ pulse, activeNode, provider }: NeuralNodeMon
                 <span className="text-[9px] font-mono text-neutral-700 uppercase">Sector: 0xUTZY</span>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-                {nodes.map(node => (
-                    <div key={node.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between group hover:border-white/10 transition-all">
-                        <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-xl ${node.status === 'active' ? 'bg-cyan-500/10 text-cyan-400' : 'bg-neutral-900 text-neutral-700'}`}>
-                                <node.icon className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-black text-neutral-300 tracking-widest uppercase">{node.name}</div>
-                                <div className="text-[8px] font-mono text-neutral-600 uppercase mt-0.5">{node.status}</div>
-                            </div>
-                        </div>
+            {/* Neural Graph */}
+            <div className="flex-1 relative min-h-[180px]">
+                 <svg className="w-full h-full absolute inset-0" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <radialGradient id="nodeGlow" cx="0.5" cy="0.5" r="0.5">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                        </radialGradient>
+                    </defs>
 
-                        <div className="flex flex-col items-end gap-2">
-                            <div className="flex gap-1">
-                                {[...Array(10)].map((_, i) => (
-                                    <motion.div
-                                        key={i}
-                                        animate={{
-                                            opacity: (i / 10) < (node.load / 100) ? 1 : 0.1,
-                                            backgroundColor: (i / 10) < (node.load / 100) ? "#22d3ee" : "#262626"
-                                        }}
-                                        className="w-1.5 h-1.5 rounded-full"
+                    {/* Connections */}
+                    {satellites.map(node => (
+                        <g key={`conn-${node.id}`}>
+                            {/* Base Line */}
+                            <line
+                                x1={core.x} y1={core.y}
+                                x2={node.x} y2={node.y}
+                                stroke={node.load > 0 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.05)"}
+                                strokeWidth="1"
+                            />
+
+                            {/* Data Packet (from Core to Node) */}
+                            {node.load > 0 && (
+                                <circle r="2" fill="white">
+                                    <animateMotion
+                                        dur={`${2000 / node.load}s`}
+                                        repeatCount="indefinite"
+                                        path={`M${core.x},${core.y} L${node.x},${node.y}`}
                                     />
-                                ))}
-                            </div>
-                            <span className="text-[8px] font-mono text-neutral-800 uppercase">Load: {node.load}%</span>
+                                </circle>
+                            )}
+
+                             {/* Feedback Packet (from Node to Core) */}
+                             {node.load > 50 && (
+                                <circle r="1.5" fill={node.id === 'music' ? '#c084fc' : '#22d3ee'}>
+                                    <animateMotion
+                                        dur={`${3000 / node.load}s`}
+                                        repeatCount="indefinite"
+                                        path={`M${node.x},${node.y} L${core.x},${core.y}`}
+                                    />
+                                </circle>
+                            )}
+                        </g>
+                    ))}
+
+                    {/* Nodes */}
+                    {nodes.map(node => (
+                        <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+                            {/* Pulse Ring */}
+                            {node.load > 0 && (
+                                <circle r="20" fill="url(#nodeGlow)" opacity={node.load / 100}>
+                                    <animate attributeName="r" from="10" to="30" dur="1.5s" repeatCount="indefinite" />
+                                    <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
+                                </circle>
+                            )}
+
+                            {/* Node Body */}
+                            <circle r="12" fill="#000" stroke={node.load > 0 ? "white" : "#333"} strokeWidth="1.5" />
+
+                            {/* Icon Wrapper (ForeignObject is tricky in SVG, let's use circle color/text instead or overlay div?
+                               Actually, we can use React to overlay icons *on top* of SVG.
+                               But let's keep it simple: styled circle)
+                            */}
+                             <circle r="4" fill={node.load > 0 ? (node.id === 'music' ? '#c084fc' : '#22d3ee') : '#333'} />
+                        </g>
+                    ))}
+                 </svg>
+
+                 {/* Overlay Icons (Absolute Positioned based on % for simplicity, or matching SVG coords) */}
+                 {nodes.map(node => (
+                     <div
+                        key={`overlay-${node.id}`}
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 pointer-events-none"
+                        style={{ left: `${(node.x / 400) * 100}%`, top: `${(node.y / 300) * 100}%` }}
+                     >
+                        <div className={`
+                            p-2 rounded-full border bg-black
+                            ${node.load > 0 ? 'border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'border-white/5 text-neutral-700'}
+                            transition-all duration-500
+                        `}>
+                            <node.icon className="w-3 h-3" />
                         </div>
-                    </div>
-                ))}
+                        <span className={`text-[8px] font-mono tracking-widest uppercase bg-black/50 px-1 rounded ${node.load > 0 ? node.color : 'text-neutral-700'}`}>
+                            {node.name}
+                        </span>
+                     </div>
+                 ))}
             </div>
 
-            <div className="pt-6 border-t border-white/5 space-y-4">
-                <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <span className="text-[8px] font-mono text-neutral-600 uppercase">Engine Architecture</span>
-                        <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mt-1">
-                            {nodes.find(n => n.id === 'music')?.status !== "idle" ? "NEURAL LINK ACTIVE" : "ESTABLISHING..."}
-                        </span>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                        <span className="text-[9px] font-mono text-cyan-400/80 uppercase">
-                            VRAM: {nodes.find(n => n.id === 'music')?.status.split(": ")[1] || "0 MB"}
-                        </span>
-                        <span className="text-[9px] font-mono text-purple-400/80 uppercase">
-                            Synapse Ready
-                        </span>
-                    </div>
+            {/* Footer Stats */}
+            <div className="pt-4 border-t border-white/5 grid grid-cols-2 gap-4 relative z-10">
+                 <div className="bg-black/40 rounded-xl p-3 border border-white/5 flex flex-col justify-between h-full">
+                    <span className="text-[8px] font-mono text-neutral-600 uppercase">VRAM Usage</span>
+                    <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mt-1">
+                        {vram}
+                    </span>
                 </div>
-
-                <div className="bg-black/40 rounded-xl p-4 border border-white/5 flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <span className="text-[8px] font-mono text-neutral-600 uppercase">Styles in Gravity</span>
-                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-1">Memory Matrix</span>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                        {synapseTop3.length > 0 ? synapseTop3.map((s, i) => (
-                            <span key={i} className="text-[9px] font-mono text-cyan-400/80 uppercase">{s}</span>
-                        )) : <span className="text-[9px] font-mono text-neutral-800 uppercase">Calibrating...</span>}
+                 <div className="bg-black/40 rounded-xl p-3 border border-white/5 flex flex-col justify-between h-full">
+                    <span className="text-[8px] font-mono text-neutral-600 uppercase">Synapse Weights</span>
+                    <div className="flex flex-col gap-0.5 mt-1">
+                        {synapseTop3.slice(0, 2).map((s, i) => (
+                             <span key={i} className="text-[8px] font-mono text-neutral-400 uppercase truncate">{s}</span>
+                        ))}
+                         {synapseTop3.length === 0 && <span className="text-[8px] text-neutral-700">CALIBRATING...</span>}
                     </div>
                 </div>
             </div>
