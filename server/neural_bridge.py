@@ -1,11 +1,14 @@
 import os
 import io
+import json
+import uuid
 import torch
 import uvicorn
 import gc
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel
 from audiocraft.models import MusicGen, AudioGen
 import torchaudio
@@ -16,6 +19,10 @@ PORT = int(os.getenv("PORT", 8000))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 app = FastAPI(title="Sonic Studio Neural Bridge")
+
+# Serve Generated Outputs (Content Layer)
+os.makedirs("server/outputs", exist_ok=True)
+app.mount("/outputs", StaticFiles(directory="server/outputs"), name="outputs")
 
 # CORS for Localhost Studio
 app.add_middleware(
@@ -88,11 +95,19 @@ async def health_check():
 
 @app.post("/generate")
 async def generate(req: GenerationRequest):
+    """
+    Generates audio and returns a Job Manifest (JSON) instead of a raw blob.
+    Persists artifacts to disk for System 2 separation.
+    """
     model = manager.get_model(req.type, req.size)
     if not model:
         raise HTTPException(status_code=503, detail="Neural Engine failed to load model")
 
     try:
+        job_id = str(uuid.uuid4())
+        job_dir = os.path.join("server/outputs", job_id)
+        os.makedirs(job_dir, exist_ok=True)
+
         # Normalize Layers
         layers: list[LayerConfig] = []
         if req.layers:
@@ -133,9 +148,26 @@ async def generate(req: GenerationRequest):
         else:
             wav = model.generate(prompts, progress=True) 
         
-        # Post-Processing: Mix or Single
+        # Post-Processing & Persistence
         # wav shape is [Batch, Channels, Time]
         
+        manifest_files = {}
+
+        # 1. Save Individual Stems (for Composability)
+        if is_field:
+            for i, layer_wav in enumerate(wav):
+                # layer_wav is [C, T]
+                stem_path = os.path.join(job_dir, f"stem_{i}.wav")
+
+                # Expand Mono to Stereo if needed
+                if layer_wav.shape[0] == 1:
+                    layer_wav = layer_wav.repeat(2, 1)
+
+                stem_cpu = layer_wav.cpu().numpy().T
+                scipy.io.wavfile.write(stem_path, 32000, stem_cpu)
+                manifest_files[f"stem_{i}"] = f"/outputs/{job_id}/stem_{i}.wav"
+
+        # 2. Mix Down (for Preview/System 1)
         if is_field:
             print("Mixing Field Layers (Spectral Fusion)...")
             mixed_buffer = torch.zeros_like(wav[0]) # [C, T] assuming all same length
@@ -148,13 +180,9 @@ async def generate(req: GenerationRequest):
                 layer_wav = layer_wav * cfg.volume
                 
                 # Apply Pan (Simple Stereo Panning)
-                # Assumes model emits Stereo (2 channels). If Mono, expand.
                 if layer_wav.shape[0] == 1:
                     layer_wav = layer_wav.repeat(2, 1)
 
-                # Simple Linear for Speed:
-                # pan element is -1 to 1.
-                # Let's use the straightforward "Balance" control style:
                 left_gain = 1.0 if cfg.pan <= 0 else (1.0 - cfg.pan)
                 right_gain = 1.0 if cfg.pan >= 0 else (1.0 + cfg.pan)
                 
@@ -165,7 +193,7 @@ async def generate(req: GenerationRequest):
 
             mixed = mixed_buffer
             
-            # Simple Peak Normalization to -1dB to prevent clip
+            # Simple Peak Normalization to -1dB
             max_val = torch.abs(mixed).max()
             if max_val > 0.9:
                 mixed = mixed / (max_val + 1e-6) * 0.9
@@ -174,17 +202,33 @@ async def generate(req: GenerationRequest):
         else:
             wav_cpu = wav[0].cpu() # Single batch
         
-        # Use Torchaudio to save to buffer
-        # Use Scipy for robust WAV encoding (Avoids AV/FFmpeg issues)
-        
-        # wav_cpu is [Channels, Time] -> need [Time, Channels] for Scipy
+        # Save Mix
         audio_np = wav_cpu.numpy().T
+        mix_path = os.path.join(job_dir, "mix.wav")
+        scipy.io.wavfile.write(mix_path, 32000, audio_np)
         
-        buff = io.BytesIO()
-        scipy.io.wavfile.write(buff, 32000, audio_np)
-        buff.seek(0)
+        manifest_files["mix"] = f"/outputs/{job_id}/mix.wav"
+
+        # 3. Create Manifest (The Receipt)
+        manifest = {
+            "job_id": job_id,
+            "status": "completed",
+            "type": req.type,
+            "duration": req.duration,
+            "files": manifest_files,
+            "layers": [l.dict() for l in layers],
+            "metadata": {
+                "model": f"{req.type}-{req.size}",
+                "device": DEVICE
+            }
+        }
         
-        return Response(content=buff.read(), media_type="audio/wav")
+        manifest_path = os.path.join(job_dir, "manifest.json")
+        with open(manifest_path, "w") as f:
+            json.dump(manifest, f, indent=2)
+
+        print(f"[Neural Bridge] Job {job_id} Finalized. Manifest created.")
+        return JSONResponse(content=manifest)
 
     except Exception as e:
         print(f"[Neural Bridge] Generation Error: {e}")
