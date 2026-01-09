@@ -10,10 +10,11 @@ export class HuggingFaceClient implements AudioProvider {
     private readonly apiKey: string;
     private readonly baseUrl = "https://router.huggingface.co/models/facebook/musicgen-small";
 
-    private readonly localBridgeUrl = "http://127.0.0.1:8000";
+    private readonly localBridgeUrl: string;
 
     constructor(apiKey?: string) {
         this.apiKey = apiKey || process.env.HUGGINGFACE_API_KEY || "";
+        this.localBridgeUrl = process.env.NEXT_PUBLIC_NEURAL_BRIDGE_URL || "http://127.0.0.1:8000";
         if (!this.apiKey) console.warn("[HuggingFace] No API Key found. Rate limits will be strict.");
     }
 
@@ -69,8 +70,24 @@ export class HuggingFaceClient implements AudioProvider {
             throw new Error(`Local Bridge Error: ${err}`);
         }
 
-        const blob = await response.blob();
-        return this.blobToResult(blob, "local-gpu", `${bridgeType}-medium`);
+        // Parse Manifest instead of Blob
+        const manifest = await response.json();
+
+        // Construct Full URLs
+        const mixPath = manifest.files.mix;
+        const fullMixUrl = `${this.localBridgeUrl}${mixPath}`;
+
+        return {
+            url: fullMixUrl,
+            metadata: {
+                provider: "local-gpu",
+                model: manifest.metadata.model,
+                request_id: manifest.job_id,
+                duration: manifest.duration,
+                stems: manifest.files // Attach full file map for future composability
+            },
+            contentType: "audio/wav"
+        };
     }
 
     private async generateCloud(input: GenerationInput): Promise<GenerationResult> {
