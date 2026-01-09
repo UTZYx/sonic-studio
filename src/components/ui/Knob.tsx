@@ -11,6 +11,9 @@ interface KnobProps {
     label?: string;
     size?: number;
     color?: "cyan" | "purple" | "white" | "pink";
+    onInteractionStart?: () => void;
+    onInteractionEnd?: () => void;
+    step?: number;
 }
 
 export function Knob({
@@ -20,17 +23,22 @@ export function Knob({
     onChange,
     label,
     size = 64,
-    color = "cyan"
+    color = "cyan",
+    onInteractionStart,
+    onInteractionEnd,
+    step
 }: KnobProps) {
     const [isDragging, setIsDragging] = useState(false);
     const startY = useRef<number>(0);
     const startVal = useRef<number>(0);
+    const keyboardStep = step || (max - min) / 50;
 
     // Calculate rotation (-145deg to +145deg)
     const percentage = (value - min) / (max - min);
     const rotation = -145 + (percentage * 290);
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        onInteractionStart?.();
         setIsDragging(true);
         startY.current = e.clientY;
         startVal.current = value;
@@ -53,9 +61,35 @@ export function Knob({
 
     const handleMouseUp = () => {
         setIsDragging(false);
+        onInteractionEnd?.();
         document.body.style.cursor = "default";
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const key = e.key;
+        if (['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(key)) {
+            e.preventDefault();
+            if (!isDragging) {
+                setIsDragging(true);
+                onInteractionStart?.();
+            }
+
+            let delta = 0;
+            if (key === 'ArrowUp' || key === 'ArrowRight') delta = keyboardStep;
+            if (key === 'ArrowDown' || key === 'ArrowLeft') delta = -keyboardStep;
+
+            const newVal = Math.min(max, Math.max(min, value + delta));
+            onChange(newVal);
+        }
+    };
+
+    const handleKeyUp = (e: React.KeyboardEvent) => {
+        if (['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(e.key)) {
+            setIsDragging(false);
+            onInteractionEnd?.();
+        }
     };
 
     const getColor = () => {
@@ -68,9 +102,17 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                role="slider"
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-label={label || "Knob"}
+                tabIndex={0}
+                className="relative flex items-center justify-center cursor-ns-resize focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-full"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
