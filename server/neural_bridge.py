@@ -6,7 +6,7 @@ import gc
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from audiocraft.models import MusicGen, AudioGen
 import torchaudio
 import scipy.io.wavfile
@@ -18,12 +18,14 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 app = FastAPI(title="Sonic Studio Neural Bridge")
 
 # CORS for Localhost Studio
+origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 class ModelManager:
@@ -68,13 +70,13 @@ class LayerConfig(BaseModel):
 
 class GenerationRequest(BaseModel):
     prompt: str
-    type: str = "music" # "music" or "sfx"
-    size: str = "small"
+    type: str = Field("music", pattern="^(music|sfx)$")
+    size: str = Field("small", pattern="^(small|medium|large)$")
     layers: list[LayerConfig | str] | None = None # Field Composition
-    duration: int = 10
+    duration: int = Field(10, ge=1, le=120, description="Duration in seconds (1-120)")
     audio_context: str | None = None
-    top_k: int = 250
-    temperature: float = 1.0
+    top_k: int = Field(250, ge=1, le=1000)
+    temperature: float = Field(1.0, ge=0.1, le=5.0)
 
 @app.get("/health")
 async def health_check():
@@ -188,7 +190,7 @@ async def generate(req: GenerationRequest):
 
     except Exception as e:
         print(f"[Neural Bridge] Generation Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal Generation Error")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)
