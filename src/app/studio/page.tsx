@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";
@@ -22,6 +22,21 @@ import { useSonicEngine } from "@/hooks/useSonicEngine";
 
 export default function StudioPage() {
     const [currentProject, setCurrentProject] = useState<Project | null>(null);
+    const [prompt, setPrompt] = useState("Nova x UTZYx — Calibrated. Generate a crisp line.");
+    const [mode, setMode] = useState<"voice" | "music" | "sfx">("voice");
+    const [status, setStatus] = useState<string>("idle");
+    const [provider, setProvider] = useState<"local-gpu" | "cloud-eleven" | "cloud-hf" | undefined>(undefined);
+
+    // Timeline State (Phase 10)
+    const [timelineSegments, setTimelineSegments] = useState<TimelineSegment[]>([]);
+    const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1);
+    const sequencerRef = useRef<SequenceEngine | null>(null);
+    const [logs, setLogs] = useState<string[]>([]);
+
+    // Stable logging function
+    const addLog = useCallback((msg: string) => {
+        setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    }, []);
 
     const startSave = async () => {
         const name = window.prompt("Project Name:", currentProject?.name || "Cyberpunk Alpha");
@@ -87,19 +102,6 @@ export default function StudioPage() {
             }
         }
     };
-
-    const [prompt, setPrompt] = useState("Nova x UTZYx — Calibrated. Generate a crisp line.");
-    const [mode, setMode] = useState<"voice" | "music" | "sfx">("voice");
-    const [status, setStatus] = useState<string>("idle");
-    const [provider, setProvider] = useState<"local-gpu" | "cloud-eleven" | "cloud-hf" | undefined>(undefined);
-
-    // Timeline State (Phase 10)
-    const [timelineSegments, setTimelineSegments] = useState<TimelineSegment[]>([]);
-    const [activeSegmentIndex, setActiveSegmentIndex] = useState<number>(-1);
-    const sequencerRef = useRef<SequenceEngine | null>(null);
-    const [logs, setLogs] = useState<string[]>([]);
-
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
     // Init Sequencer
     useEffect(() => {
