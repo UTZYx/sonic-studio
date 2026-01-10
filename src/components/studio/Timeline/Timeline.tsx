@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Plus, Play, Trash2, Zap, Layers, Copy, ChevronRight, Wand2, Repeat, Link2, Waves } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TimelineSegment, SEGMENT_TYPES, TimelineLayer } from "./types";
@@ -14,7 +14,7 @@ interface TimelineProps {
     activeIndex?: number; // Visual feedback for playback
 }
 
-export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain, activeIndex = -1 }: TimelineProps) {
+export const Timeline = memo(function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain, activeIndex = -1 }: TimelineProps) {
     const [selectedType, setSelectedType] = useState(SEGMENT_TYPES[0]);
 
     const addSegment = () => {
@@ -372,4 +372,4 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
             )}
         </div>
     );
-}
+});
