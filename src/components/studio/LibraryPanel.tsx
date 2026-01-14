@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Play, Pause, Trash2, Download, Music, Box, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SpatialCard } from "./SpatialCard";
@@ -8,7 +8,7 @@ import { useLog } from "@/lib/logs/context";
 
 interface AudioFile {
     name: string;
-    id: string;   // Was missing?
+    id: string;
     prompt?: string;
     url: string;
     size: number;
@@ -16,58 +16,162 @@ interface AudioFile {
     type: string;
 }
 
+interface LibraryItemProps {
+    file: AudioFile;
+    isPlaying: boolean;
+    onPlay: (url: string) => void;
+    onDelete: (id: string) => void;
+    onFavorite: (file: AudioFile) => void;
+}
+
+const LibraryItem = memo(({ file, isPlaying, onPlay, onDelete, onFavorite }: LibraryItemProps) => {
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="group"
+        >
+            <div className={`relative bg-neutral-900/40 border border-white/5 hover:border-cyan-500/30 rounded-xl p-4 transition-all ${isPlaying ? 'border-cyan-500/50 bg-cyan-900/10' : ''}`}>
+                <div className="flex justify-between items-start gap-4">
+
+                    {/* Play Button */}
+                    <button
+                        onClick={() => onPlay(file.url)}
+                        className={`
+                            shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all
+                            ${isPlaying
+                                ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                                : "bg-white/5 text-white hover:bg-white/20 hover:scale-110"
+                            }
+                        `}
+                    >
+                        {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                    </button>
+
+                    <div className="flex-1 min-w-0 pt-1">
+                        <h3 className="text-[10px] font-bold text-neutral-300 truncate font-mono tracking-wider mb-1" title={file.name}>
+                            {file.name}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-mono text-neutral-600 uppercase">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </span>
+                            <span className="text-[8px] font-mono text-neutral-600 uppercase border-l border-white/10 pl-2">
+                                {new Date(file.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                    </div>
+
+                    <a
+                        href={file.url}
+                        download={file.name}
+                        className="p-2 text-neutral-600 hover:text-cyan-400 transition-colors"
+                        title="Download"
+                    >
+                        <Download className="w-4 h-4" />
+                    </a>
+
+                    <button
+                        onClick={() => onDelete(file.id)}
+                        className="p-2 text-neutral-600 hover:text-red-400 transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                        onClick={() => onFavorite(file)}
+                        className="p-2 text-neutral-600 hover:text-yellow-400 transition-colors"
+                        title="Promote to Archive"
+                    >
+                        <Star className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Visualizer Bar (Fake for now) */}
+                {isPlaying && (
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-cyan-500/20 overflow-hidden rounded-b-xl">
+                        <motion.div
+                            className="h-full bg-cyan-400 blur-[2px]"
+                            initial={{ width: "0%" }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: 10, ease: "linear", repeat: Infinity }}
+                        />
+                    </div>
+                )}
+            </div>
+        </motion.div>
+    );
+});
+
+LibraryItem.displayName = "LibraryItem";
+
 export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const [files, setFiles] = useState<AudioFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [playingFile, setPlayingFile] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    // Bolt: Ref to track playing state for stable callbacks
+    const playingFileRef = useRef<string | null>(null);
     const { addLog } = useLog();
 
-    const fetchLibrary = async () => {
-        try {
-            setLoading(true);
-            const res = await fetch("/api/audio/masters");
-            const data = await res.json();
-            if (data.tracks) {
-                addLog(`[Library] Indexing ${data.tracks.length} outputs...`);
-                // Map API response to UI model
-                const mapped = data.tracks.map((t: any) => ({
-                    id: t.id,
-                    name: t.title,
-                    prompt: t.prompt,
-                    path: "", // Deprecated
-                    url: t.url,
-                    size: t.size,
-                    created: t.created,
-                    type: t.type
-                }));
-                setFiles(mapped);
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Sync ref with state to ensure handlePlay has access to latest state without dependency
+    useEffect(() => {
+        playingFileRef.current = playingFile;
+    }, [playingFile]);
 
     useEffect(() => {
+        const fetchLibrary = async () => {
+            try {
+                setLoading(true);
+                const res = await fetch("/api/audio/masters");
+                const data = await res.json();
+                if (data.tracks) {
+                    addLog(`[Library] Indexing ${data.tracks.length} outputs...`);
+                    // Map API response to UI model
+                    const mapped = data.tracks.map((t: any) => ({
+                        id: t.id,
+                        name: t.title,
+                        prompt: t.prompt,
+                        path: "", // Deprecated
+                        url: t.url,
+                        size: t.size,
+                        created: t.created,
+                        type: t.type
+                    }));
+                    setFiles(mapped);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchLibrary();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refreshKey]);
 
-    const handlePlay = (url: string) => {
-        if (playingFile === url) {
+    // Bolt: Optimized handlePlay with stable callback using Ref to avoid side effects in state updater
+    const handlePlay = useCallback((url: string) => {
+        const current = playingFileRef.current;
+        if (current === url) {
             audioRef.current?.pause();
             setPlayingFile(null);
+            playingFileRef.current = null; // Optimistic update
         } else {
             if (audioRef.current) {
                 audioRef.current.src = url;
                 audioRef.current.play();
                 setPlayingFile(url);
+                playingFileRef.current = url; // Optimistic update
             }
         }
-    };
+    }, []);
 
-    const handleDelete = async (id: string) => {
+    // Bolt: Optimized handleDelete with stable callback
+    const handleDelete = useCallback(async (id: string) => {
         if (!confirm("Delete this track permanently?")) return;
 
         try {
@@ -82,7 +186,21 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
             console.error(e);
             alert("Error deleting track");
         }
-    };
+    }, [addLog]);
+
+    // Bolt: New stable handler for favorites
+    const handleFavorite = useCallback(async (file: AudioFile) => {
+        await fetch("/api/audio/favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                filename: file.name,
+                prompt: file.prompt || "unknown"
+            })
+        });
+        addLog(`[Archive] Promoted '${file.name}' to Crimson Cassini`);
+        alert("Archived to Crimson Cassini");
+    }, [addLog]);
 
     return (
         <div className="space-y-10">
@@ -127,95 +245,15 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <AnimatePresence mode="popLayout">
-                        {files.map((file, idx) => (
-                            <motion.div
+                        {files.map((file) => (
+                            <LibraryItem
                                 key={file.name}
-                                layout
-                                initial={{ opacity: 0, scale: 0.98 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="group"
-                            >
-                                <div className={`relative bg-neutral-900/40 border border-white/5 hover:border-cyan-500/30 rounded-xl p-4 transition-all ${playingFile === file.url ? 'border-cyan-500/50 bg-cyan-900/10' : ''}`}>
-                                    <div className="flex justify-between items-start gap-4">
-
-                                        {/* Play Button */}
-                                        <button
-                                            onClick={() => handlePlay(file.url)}
-                                            className={`
-                                                shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all
-                                                ${playingFile === file.url
-                                                    ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]"
-                                                    : "bg-white/5 text-white hover:bg-white/20 hover:scale-110"
-                                                }
-                                            `}
-                                        >
-                                            {playingFile === file.url ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                                        </button>
-
-                                        <div className="flex-1 min-w-0 pt-1">
-                                            <h3 className="text-[10px] font-bold text-neutral-300 truncate font-mono tracking-wider mb-1" title={file.name}>
-                                                {file.name}
-                                            </h3>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[8px] font-mono text-neutral-600 uppercase">
-                                                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                                                </span>
-                                                <span className="text-[8px] font-mono text-neutral-600 uppercase border-l border-white/10 pl-2">
-                                                    {new Date(file.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <a
-                                            href={file.url}
-                                            download={file.name}
-                                            className="p-2 text-neutral-600 hover:text-cyan-400 transition-colors"
-                                            title="Download"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                        </a>
-
-                                        <button
-                                            onClick={() => handleDelete(file.id)}
-                                            className="p-2 text-neutral-600 hover:text-red-400 transition-colors"
-                                            title="Delete"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-
-                                        <button
-                                            onClick={async () => {
-                                                await fetch("/api/audio/favorites", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({
-                                                        filename: file.name,
-                                                        prompt: file.prompt || "unknown"
-                                                    })
-                                                });
-                                                addLog(`[Archive] Promoted '${file.name}' to Crimson Cassini`);
-                                                alert("Archived to Crimson Cassini");
-                                            }}
-                                            className="p-2 text-neutral-600 hover:text-yellow-400 transition-colors"
-                                            title="Promote to Archive"
-                                        >
-                                            <Star className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {/* Visualizer Bar (Fake for now) */}
-                                    {playingFile === file.url && (
-                                        <div className="absolute bottom-0 left-0 w-full h-1 bg-cyan-500/20 overflow-hidden rounded-b-xl">
-                                            <motion.div
-                                                className="h-full bg-cyan-400 blur-[2px]"
-                                                initial={{ width: "0%" }}
-                                                animate={{ width: "100%" }}
-                                                transition={{ duration: 10, ease: "linear", repeat: Infinity }}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.div>
+                                file={file}
+                                isPlaying={playingFile === file.url}
+                                onPlay={handlePlay}
+                                onDelete={handleDelete}
+                                onFavorite={handleFavorite}
+                            />
                         ))}
                     </AnimatePresence>
                 </div>
