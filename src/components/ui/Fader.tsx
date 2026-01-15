@@ -47,6 +47,41 @@ export function Fader({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range * 0.05;
+        const largeStep = range * 0.2;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                e.preventDefault();
+                onChange(Math.min(max, value + step));
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                e.preventDefault();
+                onChange(Math.max(min, value - step));
+                break;
+            case "PageUp":
+                e.preventDefault();
+                onChange(Math.min(max, value + largeStep));
+                break;
+            case "PageDown":
+                e.preventDefault();
+                onChange(Math.max(min, value - largeStep));
+                break;
+            case "Home":
+                e.preventDefault();
+                onChange(min);
+                break;
+            case "End":
+                e.preventDefault();
+                onChange(max);
+                break;
+        }
+    };
+
     const updateValueFromMouse = (clientY: number) => {
         if (!trackRef.current) return;
         const rect = trackRef.current.getBoundingClientRect();
@@ -69,9 +104,18 @@ export function Fader({
             {/* Track */}
             <div
                 ref={trackRef}
-                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize"
+                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize focus:outline-none focus:ring-2 focus:ring-white/20"
                 style={{ height }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                tabIndex={0}
+                role="slider"
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                aria-valuetext={`${Math.round(((value - min) / (max - min)) * 100)}%`}
+                aria-label={label || "Fader"}
+                aria-orientation="vertical"
             >
                 {/* Center Line */}
                 <div className="absolute top-2 bottom-2 w-[1px] bg-neutral-800"></div>
