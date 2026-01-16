@@ -58,6 +58,46 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const smallStep = range * 0.05;
+        const largeStep = range * 0.2;
+
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowRight":
+            case "ArrowUp":
+                newVal = Math.min(max, value + smallStep);
+                e.preventDefault();
+                break;
+            case "ArrowLeft":
+            case "ArrowDown":
+                newVal = Math.max(min, value - smallStep);
+                e.preventDefault();
+                break;
+            case "PageUp":
+                newVal = Math.min(max, value + largeStep);
+                e.preventDefault();
+                break;
+            case "PageDown":
+                newVal = Math.max(min, value - largeStep);
+                e.preventDefault();
+                break;
+            case "Home":
+                newVal = min;
+                e.preventDefault();
+                break;
+            case "End":
+                newVal = max;
+                e.preventDefault();
+                break;
+            default:
+                return;
+        }
+        onChange(newVal);
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,9 +108,17 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                role="slider"
+                tabIndex={0}
+                aria-label={label || "Knob"}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuetext={value.toFixed(1)}
+                className="relative flex items-center justify-center cursor-ns-resize rounded-full outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
@@ -97,7 +145,7 @@ export function Knob({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center" aria-hidden="true">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {value.toFixed(1)}
