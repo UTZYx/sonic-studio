@@ -6,7 +6,7 @@ import gc
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from audiocraft.models import MusicGen, AudioGen
 import torchaudio
 import scipy.io.wavfile
@@ -20,7 +20,7 @@ app = FastAPI(title="Sonic Studio Neural Bridge")
 # CORS for Localhost Studio
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,18 +63,18 @@ manager = ModelManager()
 
 class LayerConfig(BaseModel):
     prompt: str
-    volume: float = 1.0 # 0.0 to 1.0
-    pan: float = 0.0 # -1.0 to 1.0
+    volume: float = Field(1.0, ge=0.0, le=1.0)
+    pan: float = Field(0.0, ge=-1.0, le=1.0)
 
 class GenerationRequest(BaseModel):
     prompt: str
     type: str = "music" # "music" or "sfx"
     size: str = "small"
     layers: list[LayerConfig | str] | None = None # Field Composition
-    duration: int = 10
+    duration: int = Field(10, gt=0, le=120)
     audio_context: str | None = None
-    top_k: int = 250
-    temperature: float = 1.0
+    top_k: int = Field(250, ge=0, le=2000)
+    temperature: float = Field(1.0, ge=0.0)
 
 @app.get("/health")
 async def health_check():
