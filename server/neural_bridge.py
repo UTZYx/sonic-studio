@@ -15,12 +15,20 @@ import scipy.io.wavfile
 PORT = int(os.getenv("PORT", 8000))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+# Security: Restrict CORS to allowed origins to prevent CSRF/access from malicious sites.
+# Defaults to localhost:3000 (Next.js frontend).
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+
 app = FastAPI(title="Sonic Studio Neural Bridge")
 
 # CORS for Localhost Studio
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
