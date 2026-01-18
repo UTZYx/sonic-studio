@@ -1,3 +1,6 @@
+<img width="2212" height="1534" alt="Screenshot_2026-01-18_17-02-24" src="https://github.com/user-attachments/assets/a251062e-db31-4f81-89bf-1e4cbcaab288" />
+
+
 # sonic-studio
  MusIQ
 ## License
