@@ -126,6 +126,7 @@ export default function StudioPage() {
     const [speed, setSpeed] = useState(0.5);
     const [duration, setDuration] = useState(10);
     const [instrumentalOnly, setInstrumentalOnly] = useState(false);
+    const [enhance, setEnhance] = useState(true); // Default to True for "Great Sound"
     const [pollingJobId, setPollingJobId] = useState<string | null>(null);
     const [voiceJobId, setVoiceJobId] = useState<string | null>(null);
     const [musicJobId, setMusicJobId] = useState<string | null>(null);
@@ -178,7 +179,11 @@ export default function StudioPage() {
                     postFx: "none",
                     usePreviousContext: false,
                     color: "cyan",
-                    layers: [] // Initial Field Composition
+                    layers: [
+                        { id: uuidv4(), role: "atmosphere", provider: "local-gpu", prompt: "Ambient texture, spatial drone...", active: true, volume: 0.8, pan: -0.3 },
+                        { id: uuidv4(), role: "core", provider: "local-gpu", prompt: prompt || "Main rhythm, strong melody...", active: true, volume: 1.0, pan: 0 },
+                        { id: uuidv4(), role: "detail", provider: "local-gpu", prompt: "Ear candy, glitches, foley...", active: true, volume: 0.7, pan: 0.3 },
+                    ]
                 }]);
                 // Allow state to settle, then Trigger
                 setTimeout(() => igniteSegment(firstId), 100);
@@ -206,7 +211,7 @@ export default function StudioPage() {
                     type: mode === "voice" ? "tts" : mode === "sfx" ? "sfx" : "music",
                     voiceId: mode === "voice" ? VOICE_PRESETS.find(v => v.id === selectedVoice)?.elevenLabsId : undefined,
                     duration: (mode === "music" || mode === "sfx") ? duration : undefined,
-                    settings: { warmth, speed, instrumentalOnly }
+                    settings: { warmth, speed, instrumentalOnly, enhance }
                 }),
             });
             const data = await res.json();
@@ -369,6 +374,7 @@ export default function StudioPage() {
                                 speed={speed} setSpeed={setSpeed}
                                 duration={duration} setDuration={setDuration}
                                 instrumentalOnly={instrumentalOnly} setInstrumentalOnly={setInstrumentalOnly}
+                                enhance={enhance} setEnhance={setEnhance}
                             />
                         </SpatialCard>
 

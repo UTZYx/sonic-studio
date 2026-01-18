@@ -34,7 +34,11 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
             mood: "Neutral",
             density: "medium",
             usePreviousContext: true, // Default to linked chain
-            layers: []
+            layers: [
+                { id: uuidv4(), role: "atmosphere", provider: "local-gpu", prompt: "Ambient texture, spatial drone...", active: true, volume: 0.8, pan: -0.3 },
+                { id: uuidv4(), role: "core", provider: "local-gpu", prompt: "Main rhythm, strong melody...", active: true, volume: 1.0, pan: 0 },
+                { id: uuidv4(), role: "detail", provider: "local-gpu", prompt: "Ear candy, glitches, foley...", active: true, volume: 0.7, pan: 0.3 },
+            ]
         };
         setSegments([...segments, newSegment]);
     };
@@ -115,9 +119,18 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
                             <span className={`text-[10px] font-black uppercase tracking-widest text-${segment.color}-400`}>
                                 {segment.type}
                             </span>
-                            <span className="text-[9px] font-mono text-neutral-600">
-                                {segment.duration}s
-                            </span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => toggleLayers(segment)}
+                                    className={`p-1 rounded hover:bg-white/10 transition-colors ${segment.layers && segment.layers.length > 0 ? "text-cyan-400" : "text-neutral-600"}`}
+                                    title="Toggle Field Composition (Layers)"
+                                >
+                                    <Layers className="w-3 h-3" />
+                                </button>
+                                <span className="text-[9px] font-mono text-neutral-600">
+                                    {segment.duration}s
+                                </span>
+                            </div>
                         </div>
 
                         {/* Constraints Bar: Mood & Density */}

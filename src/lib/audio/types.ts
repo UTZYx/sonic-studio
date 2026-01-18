@@ -1,14 +1,18 @@
-export type AudioGenerationType = "tts" | "sfx" | "music";
+export type AudioGenerationType = "tts" | "sfx" | "music" | "voice";
 
 export interface GenerationInput {
     text: string;
     layers?: (string | { prompt: string; volume?: number; pan?: number })[]; // Field Composition
     voiceId?: string;
     duration?: number;
+    provider?: string;
     settings?: {
         warmth?: number;
         speed?: number;
         instrumentalOnly?: boolean;
+        enhance?: boolean; // Resemble Enhance
+        audioContext?: string;
+        size?: string;
         [key: string]: any;
     };
 }
