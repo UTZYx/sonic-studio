@@ -1,0 +1,3 @@
+## 2024-05-23 - Custom Inputs Accessibility
+**Learning:** Custom interactive elements like knobs and faders are invisible to screen readers and keyboard users unless explicitly enhanced. Relying on `onMouseDown` alone excludes a significant portion of users.
+**Action:** Always wrap custom interactive visuals in a container with `role="slider"`, `tabIndex={0}`, and proper ARIA attributes. Implement a standardized `onKeyDown` handler that supports Arrow keys (fine adjustment), Page keys (coarse adjustment), and Home/End (limits). Use `focus-visible` to show ring only when navigating by keyboard.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, KeyboardEvent } from "react";
 import { motion } from "framer-motion";
 
 interface KnobProps {
@@ -58,6 +58,46 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        const range = max - min;
+        const smallStep = range * 0.05;
+        const largeStep = range * 0.20;
+        let newValue = value;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                newValue = Math.min(max, value + smallStep);
+                e.preventDefault();
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                newValue = Math.max(min, value - smallStep);
+                e.preventDefault();
+                break;
+            case "PageUp":
+                newValue = Math.min(max, value + largeStep);
+                e.preventDefault();
+                break;
+            case "PageDown":
+                newValue = Math.max(min, value - largeStep);
+                e.preventDefault();
+                break;
+            case "Home":
+                newValue = min;
+                e.preventDefault();
+                break;
+            case "End":
+                newValue = max;
+                e.preventDefault();
+                break;
+            default:
+                return;
+        }
+
+        onChange(newValue);
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,8 +108,21 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
-                style={{ width: size, height: size }}
+                role="slider"
+                tabIndex={0}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-label={label || "Knob"}
+                onKeyDown={handleKeyDown}
+                className="relative flex items-center justify-center cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-full"
+                style={{
+                    width: size,
+                    height: size,
+                    // Use dynamic color for focus ring if possible, or fallback to CSS class
+                    // We'll use Tailwind classes for the ring color mapping
+                    ["--tw-ring-color" as any]: getColor()
+                }}
                 onMouseDown={handleMouseDown}
             >
                 {/* Back Plate */}
@@ -97,7 +150,7 @@ export function Knob({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center" aria-hidden="true">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {value.toFixed(1)}
