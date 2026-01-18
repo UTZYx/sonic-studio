@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";
@@ -99,7 +99,9 @@ export default function StudioPage() {
     const sequencerRef = useRef<SequenceEngine | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
 
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    const addLog = useCallback((msg: string) => {
+        setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    }, []);
 
     // Init Sequencer
     useEffect(() => {
@@ -107,19 +109,23 @@ export default function StudioPage() {
         return () => sequencerRef.current?.stop();
     }, []);
 
+    // Keep ref to segments for callbacks to avoid re-renders
+    const timelineSegmentsRef = useRef(timelineSegments);
+    useEffect(() => { timelineSegmentsRef.current = timelineSegments; }, [timelineSegments]);
+
     // ⚡️ THE ENGINE (Brain)
     // Decoupled logic hook for neural generation
     const { igniteSegment, isWorking: isEngineWorking } = useSonicEngine(timelineSegments, setTimelineSegments, addLog);
 
-    const playChain = async () => {
-        const urls = timelineSegments.filter(s => s.status === "completed" && s.audioUrl).map(s => s.audioUrl!);
+    const playChain = useCallback(async () => {
+        const urls = timelineSegmentsRef.current.filter(s => s.status === "completed" && s.audioUrl).map(s => s.audioUrl!);
         if (urls.length === 0 || !sequencerRef.current) return;
 
         console.log("Igniting Gapless Sequence...");
         await sequencerRef.current.playSequence(urls, (index) => {
             setActiveSegmentIndex(index);
         }, 2.0); // 2 second crossfade
-    };
+    }, []);
 
     const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_PRESET.id);
     const [warmth, setWarmth] = useState(0.5);
