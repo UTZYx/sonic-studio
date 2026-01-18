@@ -1,0 +1,4 @@
+## 2026-01-15 - Unbounded Inputs and Permissive CORS
+**Vulnerability:** The Neural Bridge backend accepted unbounded values for `duration`, `top_k`, and `temperature`, allowing potential Denial of Service (DoS) attacks by exhausting GPU resources. Additionally, CORS was configured with `allow_origins=["*"]` and `allow_credentials=True`, which is insecure and allows any site to interact with the local bridge.
+**Learning:** Developers often prioritize ease of development (wildcard CORS) and flexible inputs over security boundaries. Pydantic models default to validating types but not values unless explicit `Field` constraints are used.
+**Prevention:** Always use `pydantic.Field` with `le` (less than) and `ge` (greater than) constraints for numeric inputs that consume resources. Configure CORS with explicit allowed origins via environment variables.
