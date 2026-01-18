@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AudioEngine } from "@/lib/audio/engine";
+import { ReflexEngine } from "@/lib/audio/ReflexEngine";
 import dynamic from "next/dynamic";
 import { Knob } from "@/components/ui/Knob";
 import { Fader } from "@/components/ui/Fader";
@@ -20,7 +20,7 @@ interface MixerProps {
 }
 
 export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave }: MixerProps) {
-    const engineRef = useRef<AudioEngine | null>(null);
+    const engineRef = useRef<ReflexEngine | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
 
@@ -32,11 +32,12 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
     const [musicMuted, setMusicMuted] = useState(false);
     const [solo, setSolo] = useState<"voice" | "music" | null>(null);
 
-    const [voiceBuffer, setVoiceBuffer] = useState<AudioBuffer | null>(null);
-    const [musicBuffer, setMusicBuffer] = useState<AudioBuffer | null>(null);
+    // Removed local buffer state as ReflexEngine manages it
+    // const [voiceBuffer, setVoiceBuffer] = useState<AudioBuffer | null>(null);
+    // const [musicBuffer, setMusicBuffer] = useState<AudioBuffer | null>(null);
 
     useEffect(() => {
-        engineRef.current = new AudioEngine();
+        engineRef.current = new ReflexEngine();
         return () => engineRef.current?.stop();
     }, []);
 
@@ -82,58 +83,54 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
             engineRef.current.stop();
             setIsPlaying(false);
         } else {
-            engineRef.current.playMixed(voiceBuffer, musicBuffer);
+            engineRef.current.play();
             setIsPlaying(true);
         }
     };
 
     const handleBounce = async () => {
-        if (!voiceBuffer && !musicBuffer) return;
+        if (!engineRef.current) return;
 
-        console.log("Bouncing mix...");
+        const tracks = engineRef.current.getAllTracks();
+        if (tracks.length === 0) return;
+
+        console.log("Bouncing mix (Universal)...");
         setLoading(true);
 
         try {
-            // Determine total length
-            const d1 = voiceBuffer?.duration || 0;
-            const d2 = musicBuffer?.duration || 0;
-            const length = Math.max(d1, d2);
+            // 1. Determine total length (max of all tracks)
+            let maxLength = 0;
+            tracks.forEach(t => {
+                if (t.buffer && t.buffer.duration > maxLength) maxLength = t.buffer.duration;
+            });
+
+            if (maxLength === 0) throw new Error("No audio content to bounce");
+
             const sampleRate = 44100;
+            const offlineCtx = new OfflineAudioContext(2, maxLength * sampleRate, sampleRate);
 
-            const offlineCtx = new OfflineAudioContext(2, length * sampleRate, sampleRate);
+            // 2. Reconstruct graph offline for ALL tracks
+            tracks.forEach(track => {
+                if (!track.buffer) return;
 
-            // Reconstruct graph offline
-            if (voiceBuffer) {
                 const src = offlineCtx.createBufferSource();
-                src.buffer = voiceBuffer;
+                src.buffer = track.buffer;
+
                 const gain = offlineCtx.createGain();
+                gain.gain.value = track.volume; // Use the exact volume from the engine (System 1 state)
+
                 const panner = offlineCtx.createStereoPanner();
+                panner.pan.value = track.pan;
 
-                let vVol = voiceMuted || (solo === "music") ? 0 : voiceVol;
-                gain.gain.value = vVol;
-                panner.pan.value = voicePan;
-
+                // Routing
                 src.connect(gain).connect(panner).connect(offlineCtx.destination);
                 src.start(0);
-            }
+            });
 
-            if (musicBuffer) {
-                const src = offlineCtx.createBufferSource();
-                src.buffer = musicBuffer;
-                const gain = offlineCtx.createGain();
-                const panner = offlineCtx.createStereoPanner();
-
-                let mVol = musicMuted || (solo === "voice") ? 0 : musicVol;
-                gain.gain.value = mVol;
-                panner.pan.value = musicPan;
-
-                src.connect(gain).connect(panner).connect(offlineCtx.destination);
-                src.start(0);
-            }
-
+            // 3. Render
             const renderedBuffer = await offlineCtx.startRendering();
 
-            // Convert to WAV Blob
+            // 4. Convert to WAV Blob
             const wavData = audioBufferToWav(renderedBuffer);
             const blob = new Blob([wavData], { type: "audio/wav" });
             const url = URL.createObjectURL(blob);
@@ -141,7 +138,7 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
             // Trigger Download
             const a = document.createElement("a");
             a.href = url;
-            a.download = `UTZYx_Mix_${new Date().toISOString().slice(0, 19)}.wav`;
+            a.download = `UTZYx_Master_${new Date().toISOString().slice(0, 19)}.wav`;
             a.click();
             URL.revokeObjectURL(url);
 
@@ -274,7 +271,7 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
                     <div className="flex gap-4">
                         <button
                             onClick={togglePlay}
-                            disabled={loading || (!voiceBuffer && !musicBuffer)}
+                            disabled={loading || (!voiceUrl && !musicUrl && (!musicStems || musicStems.length === 0))}
                             className={`
                                 relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-700
                                 ${isPlaying ? "bg-red-500/10 border border-red-500/30 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.1)]" : "bg-white text-black shadow-xl hover:scale-105"}
@@ -287,8 +284,8 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
 
                         <button
                             onClick={handleBounce}
-                            disabled={loading || (!voiceBuffer && !musicBuffer)}
-                            className="w-16 h-16 rounded-full flex items-center justify-center border border-whit/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-400 transition-all disabled:opacity-20 group"
+                            disabled={loading || (!voiceUrl && !musicUrl && (!musicStems || musicStems.length === 0))}
+                            className="w-16 h-16 rounded-full flex items-center justify-center border border-white/10 bg-black/40 hover:bg-cyan-500/20 hover:border-cyan-500/50 hover:text-cyan-400 transition-all disabled:opacity-20 group"
                             title="Bounce Mix to Wav"
                         >
                             <Layers className="w-6 h-6 group-hover:scale-110 transition-transform" />
