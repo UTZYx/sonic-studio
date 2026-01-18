@@ -58,6 +58,19 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range / 20; // 5% increments
+
+        if (e.key === "ArrowUp" || e.key === "ArrowRight") {
+            e.preventDefault();
+            onChange(Math.min(max, value + step));
+        } else if (e.key === "ArrowDown" || e.key === "ArrowLeft") {
+            e.preventDefault();
+            onChange(Math.max(min, value - step));
+        }
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -65,12 +78,26 @@ export function Knob({
         return "#fafafa";
     };
 
+    const getFocusRingColor = () => {
+        if (color === "cyan") return "focus:ring-cyan-500";
+        if (color === "purple") return "focus:ring-purple-500";
+        if (color === "pink") return "focus:ring-pink-500";
+        return "focus:ring-neutral-200";
+    };
+
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className={`relative flex items-center justify-center cursor-ns-resize focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black rounded-full ${getFocusRingColor()}`}
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-label={label || "Control Knob"}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
@@ -97,7 +124,7 @@ export function Knob({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center" aria-hidden="true">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {value.toFixed(1)}
