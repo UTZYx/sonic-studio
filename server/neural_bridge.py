@@ -6,7 +6,7 @@ import gc
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from audiocraft.models import MusicGen, AudioGen
 import torchaudio
 import scipy.io.wavfile
@@ -18,9 +18,12 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 app = FastAPI(title="Sonic Studio Neural Bridge")
 
 # CORS for Localhost Studio
+# Security: Restrict origins to prevent wildcard access
+origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,14 +70,14 @@ class LayerConfig(BaseModel):
     pan: float = 0.0 # -1.0 to 1.0
 
 class GenerationRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., max_length=1000, description="Text prompt for generation")
     type: str = "music" # "music" or "sfx"
     size: str = "small"
     layers: list[LayerConfig | str] | None = None # Field Composition
-    duration: int = 10
+    duration: int = Field(10, ge=1, le=120, description="Duration in seconds (max 120)")
     audio_context: str | None = None
-    top_k: int = 250
-    temperature: float = 1.0
+    top_k: int = Field(250, ge=1, le=2048, description="Top-k sampling parameter")
+    temperature: float = Field(1.0, ge=0.1, le=5.0, description="Sampling temperature")
 
 @app.get("/health")
 async def health_check():
