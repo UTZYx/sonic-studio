@@ -58,6 +58,24 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range * 0.05;
+        let newVal = value;
+
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            newVal = Math.min(max, value + step);
+            e.preventDefault();
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            newVal = Math.max(min, value - step);
+            e.preventDefault();
+        }
+
+        if (newVal !== value) {
+            onChange(newVal);
+        }
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,9 +86,16 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                role="slider"
+                tabIndex={0}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                aria-label={label || "Knob"}
+                className="relative flex items-center justify-center cursor-ns-resize outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 rounded-full"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
@@ -97,7 +122,7 @@ export function Knob({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center" aria-hidden="true">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {value.toFixed(1)}
