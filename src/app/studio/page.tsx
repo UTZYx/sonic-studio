@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";
@@ -99,7 +99,11 @@ export default function StudioPage() {
     const sequencerRef = useRef<SequenceEngine | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
 
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    const addLog = useCallback((msg: string) => {
+        setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    }, []);
+
+    const contextValue = useMemo(() => ({ addLog }), [addLog]);
 
     // Init Sequencer
     useEffect(() => {
@@ -287,7 +291,7 @@ export default function StudioPage() {
     }, [pollingJobId, status, addLog, provider]);
 
     return (
-        <LogContext.Provider value={{ addLog }}>
+        <LogContext.Provider value={contextValue}>
             <div className="min-h-screen relative bg-[#010101] text-white selection:bg-cyan-500/30 font-sans overflow-x-hidden p-4 md:p-8">
                 <div className="fixed inset-0 pointer-events-none z-0">
                     <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-cyan-500/5 blur-[160px] rounded-full" />
