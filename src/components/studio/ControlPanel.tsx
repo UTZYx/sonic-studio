@@ -1,9 +1,12 @@
 "use client";
 
 import { Knob } from "@/components/ui/Knob";
-import { Zap, Terminal, Activity } from "lucide-react";
+import { Zap, Terminal, Activity, HelpCircle } from "lucide-react";
 import { VOICE_PRESETS } from "../../config/presets";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { ParameterInspector } from "./ParameterInspector";
+import { PulsingButton } from "./PulsingButton";
 
 interface ControlPanelProps {
     prompt: string;
@@ -26,16 +29,37 @@ interface ControlPanelProps {
 
 export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
     const isGenerating = status === "submitting" || status === "processing" || status === "queued";
+    const [activeInspector, setActiveInspector] = useState<any>(null);
+    const [showProviderInfo, setShowProviderInfo] = useState(false);
+
+    const getProviderDetails = () => {
+        if (mode === "music") return { name: "HuggingFace", type: "MusicGen Small", logic: "Local Inference (Low VRAM)" };
+        if (mode === "voice") return { name: "ElevenLabs", type: "Turbo v2.5", logic: "Cloud API (High Latency)" };
+        return { name: "Local", type: "AudioLDM", logic: "Experimental" };
+    };
+    const prov = getProviderDetails();
 
     return (
         <div className="p-8 relative">
+             {/* Signal Flow Connection Line */}
+            <svg className="absolute top-1/2 left-0 w-full h-full pointer-events-none opacity-20 z-0">
+                <path d="M 120 100 Q 200 100 300 100 T 500 100" stroke="url(#flowGradient)" strokeWidth="2" fill="none" strokeDasharray="5 5" />
+                <defs>
+                    <linearGradient id="flowGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="transparent" />
+                        <stop offset="50%" stopColor={mode === 'music' ? '#ec4899' : '#22d3ee'} />
+                        <stop offset="100%" stopColor="transparent" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
             <div className="flex flex-col md:flex-row gap-8 relative z-10">
                 {/* Left Column: Mode & Params */}
                 <div className="w-full md:w-32 flex flex-col gap-6 shrink-0">
                     <div>
                         <div className="text-[10px] font-mono text-neutral-600 uppercase tracking-[0.2em] mb-4 px-1">Neural Mode</div>
-                        <div className="p-1 px-3 py-2 bg-white/5 rounded-2xl border border-white/5 text-center">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                        <div className={`p-1 px-3 py-2 bg-white/5 rounded-2xl border transition-colors text-center ${mode === 'music' ? 'border-pink-500/20' : 'border-cyan-500/20'}`}>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${mode === 'music' ? 'text-pink-400' : 'text-cyan-400'}`}>
                                 {mode}
                             </span>
                         </div>
@@ -45,25 +69,49 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                                 className={`
                                     mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border transition-all
                                     ${instrumentalOnly
-                                        ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
+                                        ? "bg-pink-500/10 border-pink-500/30 text-pink-400"
                                         : "bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400"
                                     }
                                 `}
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full ${instrumentalOnly ? "bg-cyan-400 animate-pulse" : "bg-neutral-700"}`} />
+                                <span className={`w-1.5 h-1.5 rounded-full ${instrumentalOnly ? "bg-pink-400 animate-pulse" : "bg-neutral-700"}`} />
                                 <span className="text-[8px] font-bold uppercase tracking-widest">Instrumental</span>
                             </button>
                         )}
 
-                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between px-1">
-                            <span className="text-[8px] font-mono text-neutral-600 uppercase">Provider</span>
-                            <span className={`text-[8px] font-mono font-bold uppercase ${mode === "music" ? "text-green-400" : "text-amber-500"}`}>
-                                {mode === "music" ? "HF (Free)" : "11Labs ($)"}
-                            </span>
+                        <div
+                            className="mt-4 pt-4 border-t border-white/5 relative group cursor-help"
+                            onMouseEnter={() => setShowProviderInfo(true)}
+                            onMouseLeave={() => setShowProviderInfo(false)}
+                        >
+                            <div className="flex items-center justify-between px-1">
+                                <span className="text-[8px] font-mono text-neutral-600 uppercase">Provider</span>
+                                <span className={`text-[8px] font-mono font-bold uppercase flex items-center gap-1 ${mode === "music" ? "text-green-400" : "text-amber-500"}`}>
+                                    {prov.name} <HelpCircle className="w-2 h-2 opacity-50" />
+                                </span>
+                            </div>
+
+                            {/* Provider Tooltip */}
+                            <AnimatePresence>
+                                {showProviderInfo && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0 }}
+                                        className="absolute top-10 left-0 w-40 bg-black/90 backdrop-blur border border-white/10 p-3 rounded-xl z-50 pointer-events-none"
+                                    >
+                                        <div className="text-[9px] font-bold text-white mb-1">{prov.type}</div>
+                                        <div className="text-[8px] font-mono text-neutral-500">{prov.logic}</div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
 
-                    <div className="flex md:flex-col gap-6 items-center bg-white/5 py-4 rounded-2xl border border-white/5">
+                    <div className="flex md:flex-col gap-6 items-center bg-white/5 py-4 rounded-2xl border border-white/5 relative overflow-hidden">
+                        {/* Knob Background Glow */}
+                        <div className={`absolute inset-0 opacity-10 bg-gradient-to-b from-transparent via-${mode === 'music' ? 'pink' : 'cyan'}-500/20 to-transparent pointer-events-none`} />
+
                         {(mode === "music" || mode === "sfx") && (
                             <Knob
                                 label="SEC"
@@ -73,6 +121,13 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                                 max={30}
                                 color="pink"
                                 size={38}
+                                onInteractionStart={() => setActiveInspector({
+                                    label: "DURATION",
+                                    value: `${duration}s`,
+                                    description: "Temporal Window",
+                                    technical: "Length of the generated audio frame"
+                                })}
+                                onInteractionEnd={() => setActiveInspector(null)}
                             />
                         )}
 
@@ -84,6 +139,13 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             max={1}
                             color="cyan"
                             size={38}
+                            onInteractionStart={() => setActiveInspector({
+                                label: "WARMTH",
+                                value: warmth.toFixed(2),
+                                description: "Sampling Temperature",
+                                technical: "Randomness of distribution (0.0=Greedy, 1.0=Stochastic)"
+                            })}
+                            onInteractionEnd={() => setActiveInspector(null)}
                         />
                         <Knob
                             label="STY"
@@ -93,13 +155,22 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             max={1}
                             color="purple"
                             size={38}
+                            onInteractionStart={() => setActiveInspector({
+                                label: "STYLE",
+                                value: speed.toFixed(2),
+                                description: "Top-K Selection",
+                                technical: "Limits next token to K most likely candidates"
+                            })}
+                            onInteractionEnd={() => setActiveInspector(null)}
                         />
                     </div>
                 </div>
 
                 {/* Center Column: Terminal */}
                 <div className="flex-1 flex flex-col gap-6">
-                    <div className="flex-1 min-h-[240px] bg-black/40 rounded-3xl border border-white/5 p-6 relative group flex flex-col focus-within:border-cyan-500/20 transition-all">
+                    <ParameterInspector activeParam={activeInspector} />
+
+                    <div className="flex-1 min-h-[160px] bg-black/40 rounded-3xl border border-white/5 p-6 relative group flex flex-col focus-within:border-cyan-500/20 transition-all">
                         <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
                             <div className="flex items-center gap-3">
                                 <Terminal className="w-4 h-4 text-cyan-400/40" />
@@ -168,6 +239,8 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                                         if (p === "crisp") { setWarmth(0.8); setSpeed(0.4); }
                                         if (p === "studio") { setWarmth(0.5); setSpeed(0.5); }
                                     }}
+                                    aria-label={`Set quality to ${p}`}
+                                    title={`Preset: ${p.toUpperCase()}`}
                                     className={`w-3 h-3 rounded-full transition-all border ${(p === "ghost" && warmth < 0.4) || (p === "crisp" && warmth > 0.7) || (p === "studio" && warmth >= 0.4 && warmth <= 0.7)
                                         ? "bg-cyan-400 border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
                                         : "bg-transparent border-neutral-700 hover:border-neutral-500"
@@ -177,15 +250,16 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                         </div>
                     </div>
 
-                    <button
+                    <PulsingButton
                         id="ignite-trigger"
                         onClick={startJob}
                         disabled={isGenerating}
+                        trigger={`${warmth}-${speed}-${duration}-${prompt}`}
                         className={`
                             h-28 md:flex-1 w-full flex flex-col items-center justify-center gap-3 rounded-[2.5rem] transition-all duration-700 group/btn overflow-hidden relative border border-white/10
                             ${isGenerating
                                 ? "bg-black/40 text-neutral-700 cursor-not-allowed"
-                                : "bg-neutral-900 text-white hover:scale-[1.02] hover:border-white/30"
+                                : "bg-neutral-900 text-white hover:border-white/30"
                             }
                         `}
                     >
@@ -199,7 +273,7 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                         {!isGenerating && (
                             <span className="text-[7px] text-neutral-500 font-mono mt-1 opacity-0 group-hover/btn:opacity-100 transition-opacity">CMD+ENTER</span>
                         )}
-                    </button>
+                    </PulsingButton>
                 </div>
             </div>
         </div>

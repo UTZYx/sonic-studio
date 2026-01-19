@@ -25,16 +25,20 @@ export function Timeline({ segments, setSegments, onGenerateSegment, onPlayChain
             prompt: "",
             status: "idle",
             color: selectedType.color,
-            provider: "cloud-hf", // Default to Cloud Free for now
+            provider: "cloud-hf",
             versions: [],
             selectedVersionId: undefined,
-            enhancePrompt: false, // Default off
+            enhancePrompt: false,
             loop: false,
             postFx: "none",
             mood: "Neutral",
             density: "medium",
-            usePreviousContext: true, // Default to linked chain
-            layers: []
+            usePreviousContext: true,
+            layers: [
+                { id: uuidv4(), role: "atmosphere", provider: "local-gpu", prompt: "Ambient texture...", active: true, volume: 0.8, pan: -0.3 },
+                { id: uuidv4(), role: "core", provider: "local-gpu", prompt: "", active: true, volume: 1.0, pan: 0 },
+                { id: uuidv4(), role: "detail", provider: "cloud-eleven", prompt: "Glitches, foley...", active: true, volume: 0.7, pan: 0.3 },
+            ]
         };
         setSegments([...segments, newSegment]);
     };

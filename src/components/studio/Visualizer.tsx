@@ -52,7 +52,7 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
 
 export function Visualizer({ analyser }: { analyser: AnalyserNode | null }) {
     return (
-        <div className="h-48 w-full rounded-xl overflow-hidden bg-black/50 border border-neutral-800 relative">
+        <div className="h-full w-full rounded-xl overflow-hidden bg-black/50 border border-neutral-800 relative">
             <Canvas camera={{ position: [0, 0, 25], fov: 45 }}>
                 <color attach="background" args={["#000000"]} />
                 <fog attach="fog" args={["#000000", 10, 40]} />
