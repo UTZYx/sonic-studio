@@ -6,7 +6,7 @@ import gc
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from audiocraft.models import MusicGen, AudioGen
 import torchaudio
 import scipy.io.wavfile
@@ -18,9 +18,13 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 app = FastAPI(title="Sonic Studio Neural Bridge")
 
 # CORS for Localhost Studio
+# 🛡️ Sentinel: Restrict origins to prevent arbitrary sites from connecting
+origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+origins = [origin.strip() for origin in origins if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,19 +66,19 @@ class ModelManager:
 manager = ModelManager()
 
 class LayerConfig(BaseModel):
-    prompt: str
-    volume: float = 1.0 # 0.0 to 1.0
-    pan: float = 0.0 # -1.0 to 1.0
+    prompt: str = Field(..., max_length=1000)
+    volume: float = Field(1.0, ge=0.0, le=2.0) # 0.0 to 1.0 (allow some boost up to 2.0)
+    pan: float = Field(0.0, ge=-1.0, le=1.0) # -1.0 to 1.0
 
 class GenerationRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., max_length=1000)
     type: str = "music" # "music" or "sfx"
     size: str = "small"
-    layers: list[LayerConfig | str] | None = None # Field Composition
-    duration: int = 10
+    layers: list[LayerConfig | str] | None = Field(None, max_length=10) # Field Composition
+    duration: int = Field(10, le=120, ge=1) # Max 120s to prevent DoS
     audio_context: str | None = None
-    top_k: int = 250
-    temperature: float = 1.0
+    top_k: int = Field(250, le=2000) # Limit compute
+    temperature: float = Field(1.0, ge=0.0)
 
 @app.get("/health")
 async def health_check():
@@ -188,7 +192,8 @@ async def generate(req: GenerationRequest):
 
     except Exception as e:
         print(f"[Neural Bridge] Generation Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # 🛡️ Sentinel: Don't leak stack traces to client
+        raise HTTPException(status_code=500, detail="Internal Generation Error")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=PORT)
