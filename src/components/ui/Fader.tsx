@@ -28,6 +28,40 @@ export function Fader({
     // Calculate position (0 = bottom, 1 = top)
     const percentage = (value - min) / (max - min);
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const step = (max - min) * 0.05; // 5% step
+        const largeStep = (max - min) * 0.2; // 20% step
+        let newValue = value;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                newValue = Math.min(max, value + step);
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                newValue = Math.max(min, value - step);
+                break;
+            case "PageUp":
+                newValue = Math.min(max, value + largeStep);
+                break;
+            case "PageDown":
+                newValue = Math.max(min, value - largeStep);
+                break;
+            case "Home":
+                newValue = min;
+                break;
+            case "End":
+                newValue = max;
+                break;
+            default:
+                return; // Let other keys propagate
+        }
+
+        e.preventDefault(); // Prevent scrolling
+        onChange(newValue);
+    };
+
     const handleMouseDown = (e: React.MouseEvent) => {
         setIsDragging(true);
         updateValueFromMouse(e.clientY);
@@ -69,9 +103,17 @@ export function Fader({
             {/* Track */}
             <div
                 ref={trackRef}
-                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize"
+                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:border-transparent"
                 style={{ height }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-label={label || "Volume Fader"}
+                aria-orientation="vertical"
             >
                 {/* Center Line */}
                 <div className="absolute top-2 bottom-2 w-[1px] bg-neutral-800"></div>
@@ -102,7 +144,7 @@ export function Fader({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center" aria-hidden="true">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {(value * 100).toFixed(0)}%
