@@ -47,6 +47,40 @@ export function Fader({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const step = (max - min) * 0.05; // 5% step
+        const bigStep = (max - min) * 0.2; // 20% step
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                newVal = Math.min(max, value + step);
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                newVal = Math.max(min, value - step);
+                break;
+            case "PageUp":
+                newVal = Math.min(max, value + bigStep);
+                break;
+            case "PageDown":
+                newVal = Math.max(min, value - bigStep);
+                break;
+            case "Home":
+                newVal = min;
+                break;
+            case "End":
+                newVal = max;
+                break;
+            default:
+                return;
+        }
+
+        e.preventDefault();
+        onChange(newVal);
+    };
+
     const updateValueFromMouse = (clientY: number) => {
         if (!trackRef.current) return;
         const rect = trackRef.current.getBoundingClientRect();
@@ -69,7 +103,15 @@ export function Fader({
             {/* Track */}
             <div
                 ref={trackRef}
-                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize"
+                role="slider"
+                tabIndex={0}
+                aria-label={label || "Control fader"}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-orientation="vertical"
+                onKeyDown={handleKeyDown}
+                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
                 style={{ height }}
                 onMouseDown={handleMouseDown}
             >
@@ -102,7 +144,7 @@ export function Fader({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center" aria-hidden="true">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {(value * 100).toFixed(0)}%

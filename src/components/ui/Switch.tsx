@@ -26,11 +26,26 @@ export function Switch({
         yellow: "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]",
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            onChange(!checked);
+        }
+    };
+
     return (
-        <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => onChange(!checked)}>
+        <div
+            className="flex flex-col items-center gap-2 cursor-pointer group focus-visible:outline-none"
+            onClick={() => onChange(!checked)}
+            onKeyDown={handleKeyDown}
+            role="switch"
+            aria-checked={checked}
+            tabIndex={0}
+            aria-label={label || "Toggle switch"}
+        >
             {/* The Physical Switch */}
             <div className={`
-                w-12 h-16 rounded-lg border-2 transition-colors duration-200 relative overflow-hidden
+                w-12 h-16 rounded-lg border-2 transition-colors duration-200 relative overflow-hidden group-focus-visible:ring-2 group-focus-visible:ring-cyan-500/50
                 ${checked ? "border-white/20 bg-neutral-900" : "border-neutral-800 bg-black"}
             `}>
                 {/* Background Glow */}
@@ -55,7 +70,7 @@ export function Switch({
 
             {/* Labels */}
             {(label || description) && (
-                <div className="text-center">
+                <div className="text-center" aria-hidden="true">
                     {label && <div className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${checked ? `text-${color}-400` : "text-neutral-500"}`}>{label}</div>}
                     {description && <div className="text-[10px] font-mono text-neutral-600">{description}</div>}
                 </div>
