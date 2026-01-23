@@ -1,6 +1,7 @@
 "use client";
 
 import { Knob } from "@/components/ui/Knob";
+import { Switch } from "@/components/ui/Switch";
 import { Zap, Terminal, Activity } from "lucide-react";
 import { VOICE_PRESETS } from "../../config/presets";
 import { motion } from "framer-motion";
@@ -40,19 +41,14 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
                             </span>
                         </div>
                         {mode === "music" && setInstrumentalOnly && (
-                            <button
-                                onClick={() => setInstrumentalOnly(!instrumentalOnly)}
-                                className={`
-                                    mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border transition-all
-                                    ${instrumentalOnly
-                                        ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
-                                        : "bg-transparent border-white/5 text-neutral-600 hover:text-neutral-400"
-                                    }
-                                `}
-                            >
-                                <span className={`w-1.5 h-1.5 rounded-full ${instrumentalOnly ? "bg-cyan-400 animate-pulse" : "bg-neutral-700"}`} />
-                                <span className="text-[8px] font-bold uppercase tracking-widest">Instrumental</span>
-                            </button>
+                            <div className="mt-4 flex justify-center">
+                                <Switch
+                                    checked={instrumentalOnly || false}
+                                    onChange={(v) => setInstrumentalOnly(v)}
+                                    label="INSTRUMENTAL"
+                                    color="cyan"
+                                />
+                            </div>
                         )}
 
                         <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between px-1">
