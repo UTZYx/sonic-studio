@@ -1,0 +1,3 @@
+## 2025-05-23 - Hook Callback Stability with Heavy State Dependencies
+**Learning:** When a custom hook (like `useSonicEngine`) has a callback (`igniteSegment`) that depends on a large or frequently changing state object (`timelineSegments`), putting that state in the dependency array causes the callback to be recreated on every change. This breaks optimization in child components (like `Timeline`) even if they are memoized.
+**Action:** Use a `useRef` to hold the current state and update it via `useEffect`. Access `ref.current` inside the callback. This removes the state from the callback's dependency array, ensuring referential stability without stale closures.
