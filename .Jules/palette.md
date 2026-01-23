@@ -1,0 +1,3 @@
+## 2026-01-18 - Inaccessible Custom Controls
+**Learning:** The codebase relies heavily on custom `div`-based controls (`Knob`, `Fader`, `Switch`) which lack standard accessibility attributes (`role`, `tabIndex`, `aria-*`) and keyboard interaction. This renders the application unusable for keyboard and screen reader users.
+**Action:** When creating or maintaining custom interactive components, always start with semantic HTML (e.g., `<button>`, `<input type="range">`) or strictly implement the WAI-ARIA pattern (Roles, States, Properties, Keyboard Support) if a custom element is required for styling.

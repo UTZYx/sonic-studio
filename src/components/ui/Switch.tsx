@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { KeyboardEvent } from "react";
 
 interface SwitchProps {
     checked: boolean;
@@ -26,8 +27,23 @@ export function Switch({
         yellow: "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]",
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onChange(!checked);
+        }
+    };
+
     return (
-        <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => onChange(!checked)}>
+        <div
+            className="flex flex-col items-center gap-2 cursor-pointer group outline-none rounded-xl focus-visible:ring-2 focus-visible:ring-white/50"
+            onClick={() => onChange(!checked)}
+            role="switch"
+            aria-checked={checked}
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+            aria-label={label}
+        >
             {/* The Physical Switch */}
             <div className={`
                 w-12 h-16 rounded-lg border-2 transition-colors duration-200 relative overflow-hidden
@@ -55,7 +71,7 @@ export function Switch({
 
             {/* Labels */}
             {(label || description) && (
-                <div className="text-center">
+                <div className="text-center" aria-hidden="true">
                     {label && <div className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${checked ? `text-${color}-400` : "text-neutral-500"}`}>{label}</div>}
                     {description && <div className="text-[10px] font-mono text-neutral-600">{description}</div>}
                 </div>
