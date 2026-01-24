@@ -1,0 +1,3 @@
+## 2024-05-23 - Stable Callbacks in Custom Hooks
+**Learning:** In `useSonicEngine`, the `igniteSegment` function depended on the entire `timelineSegments` array to read the current state of a segment. This caused the function reference to change on every state update, breaking `React.memo` optimizations in child components (`TimelineItem`) that received this function as a prop.
+**Action:** Use a `useRef` to hold the latest state inside the hook if the callback needs to access it but shouldn't be invalidated by its changes. This ensures the callback reference remains stable while still accessing fresh data.
