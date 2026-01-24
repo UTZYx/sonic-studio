@@ -58,6 +58,47 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range * 0.05; // 5% step
+        const largeStep = range * 0.2; // 20% step
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                newVal += step;
+                e.preventDefault();
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                newVal -= step;
+                e.preventDefault();
+                break;
+            case "PageUp":
+                newVal += largeStep;
+                e.preventDefault();
+                break;
+            case "PageDown":
+                newVal -= largeStep;
+                e.preventDefault();
+                break;
+            case "Home":
+                newVal = min;
+                e.preventDefault();
+                break;
+            case "End":
+                newVal = max;
+                e.preventDefault();
+                break;
+            default:
+                return;
+        }
+
+        newVal = Math.max(min, Math.min(max, newVal));
+        onChange(newVal);
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,9 +109,16 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className="relative flex items-center justify-center cursor-ns-resize focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus-visible:outline-none rounded-full"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-label={label || "Control Knob"}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
