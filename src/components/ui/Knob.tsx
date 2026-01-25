@@ -65,10 +65,51 @@ export function Knob({
         return "#fafafa";
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const step = (max - min) * 0.05; // 5% step
+        const largeStep = (max - min) * 0.2; // 20% step
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowRight":
+            case "ArrowUp":
+                newVal = Math.min(max, value + step);
+                break;
+            case "ArrowLeft":
+            case "ArrowDown":
+                newVal = Math.max(min, value - step);
+                break;
+            case "PageUp":
+                newVal = Math.min(max, value + largeStep);
+                break;
+            case "PageDown":
+                newVal = Math.max(min, value - largeStep);
+                break;
+            case "Home":
+                newVal = min;
+                break;
+            case "End":
+                newVal = max;
+                break;
+            default:
+                return;
+        }
+
+        e.preventDefault();
+        onChange(newVal);
+    };
+
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                role="slider"
+                tabIndex={0}
+                aria-label={label || "Control knob"}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                onKeyDown={handleKeyDown}
+                className="relative flex items-center justify-center cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-full"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
             >
