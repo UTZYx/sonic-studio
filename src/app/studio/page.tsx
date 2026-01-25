@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";
@@ -99,7 +99,7 @@ export default function StudioPage() {
     const sequencerRef = useRef<SequenceEngine | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
 
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    const addLog = useCallback((msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]), []);
 
     // Init Sequencer
     useEffect(() => {
