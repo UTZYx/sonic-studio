@@ -59,19 +59,65 @@ export function Fader({
         onChange(newValue);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        let step = 0;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                step = range * 0.05;
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                step = -range * 0.05;
+                break;
+            case "PageUp":
+                step = range * 0.2;
+                break;
+            case "PageDown":
+                step = -range * 0.2;
+                break;
+            case "Home":
+                onChange(min);
+                e.preventDefault();
+                return;
+            case "End":
+                onChange(max);
+                e.preventDefault();
+                return;
+            default:
+                return;
+        }
+
+        const newValue = Math.min(max, Math.max(min, value + step));
+        onChange(newValue);
+        e.preventDefault();
+    };
+
     const getColor = (opacity = 1) => {
         if (color === "cyan") return `rgba(6, 182, 212, ${opacity})`;
         return `rgba(168, 85, 247, ${opacity})`;
     };
+
+    const ringColor = color === "cyan" ? "focus-visible:ring-cyan-500" : "focus-visible:ring-purple-500";
 
     return (
         <div className="flex flex-col items-center gap-4 group select-none">
             {/* Track */}
             <div
                 ref={trackRef}
-                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize"
+                className={`relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize focus-visible:outline-none focus-visible:ring-2 ${ringColor} focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950`}
                 style={{ height }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                aria-label={label || "Fader"}
+                aria-orientation="vertical"
             >
                 {/* Center Line */}
                 <div className="absolute top-2 bottom-2 w-[1px] bg-neutral-800"></div>
