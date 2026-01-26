@@ -11,6 +11,8 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
     const count = 128;
     const dummy = useMemo(() => new THREE.Object3D(), []);
     const dataArray = useMemo(() => new Uint8Array(256), []);
+    // Optimization: Reuse a single Color instance to avoid GC in the render loop
+    const color = useMemo(() => new THREE.Color(), []);
 
     useFrame((state) => {
         if (!mesh.current) return;
@@ -34,7 +36,6 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
             mesh.current.setMatrixAt(i, dummy.matrix);
 
             // Color update: Strict Cyan (0.5) to Purple (0.8)
-            const color = new THREE.Color();
             color.setHSL(0.5 + (freq * 0.3), 1, 0.5 + freq * 0.5);
             mesh.current.setColorAt(i, color);
         }
