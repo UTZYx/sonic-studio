@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { AudioEngine } from "@/lib/audio/engine";
 import dynamic from "next/dynamic";
 import { Knob } from "@/components/ui/Knob";
@@ -19,7 +19,7 @@ interface MixerProps {
     onSave?: (jobId: string, type: string) => void;
 }
 
-export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave }: MixerProps) {
+export const MixerPanel = memo(function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave }: MixerProps) {
     const engineRef = useRef<AudioEngine | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -307,4 +307,4 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
             </div>
         </div>
     );
-}
+});
