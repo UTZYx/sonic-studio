@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MixerPanel } from "@/components/studio/MixerPanel";
 import { ControlPanel } from "@/components/studio/ControlPanel";
 import { LibraryPanel } from "@/components/studio/LibraryPanel";
@@ -99,7 +99,7 @@ export default function StudioPage() {
     const sequencerRef = useRef<SequenceEngine | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
 
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    const addLog = useCallback((msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]), []);
 
     // Init Sequencer
     useEffect(() => {
@@ -111,7 +111,7 @@ export default function StudioPage() {
     // Decoupled logic hook for neural generation
     const { igniteSegment, isWorking: isEngineWorking } = useSonicEngine(timelineSegments, setTimelineSegments, addLog);
 
-    const playChain = async () => {
+    const playChain = useCallback(async () => {
         const urls = timelineSegments.filter(s => s.status === "completed" && s.audioUrl).map(s => s.audioUrl!);
         if (urls.length === 0 || !sequencerRef.current) return;
 
@@ -119,7 +119,7 @@ export default function StudioPage() {
         await sequencerRef.current.playSequence(urls, (index) => {
             setActiveSegmentIndex(index);
         }, 2.0); // 2 second crossfade
-    };
+    }, [timelineSegments]);
 
     const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_PRESET.id);
     const [warmth, setWarmth] = useState(0.5);
@@ -155,7 +155,7 @@ export default function StudioPage() {
     }, []);
 
 
-    const startJob = async () => {
+    const startJob = useCallback(async () => {
         setPollingJobId(null);
 
         // [Neural Link] - If Music Mode, we route via the Timeline Engine
@@ -222,9 +222,9 @@ export default function StudioPage() {
         } catch (e: any) {
             addLog(`Network Error: ${e.message}`);
         }
-    };
+    }, [mode, timelineSegments, prompt, duration, igniteSegment, selectedVoice, warmth, speed, instrumentalOnly, addLog]);
 
-    const handleSaveTrack = async (targetJobId: string, type: string) => {
+    const handleSaveTrack = useCallback(async (targetJobId: string, type: string) => {
         const title = window.prompt(`Name this ${type} track:`, prompt.slice(0, 20));
         if (title) {
             try {
@@ -241,7 +241,7 @@ export default function StudioPage() {
                 addLog("Error saving track");
             }
         }
-    };
+    }, [prompt, addLog]);
 
     useEffect(() => {
         if (!pollingJobId || status === "completed" || status === "failed") return;

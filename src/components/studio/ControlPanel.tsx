@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Knob } from "@/components/ui/Knob";
 import { Zap, Terminal, Activity } from "lucide-react";
 import { VOICE_PRESETS } from "../../config/presets";
@@ -24,7 +25,7 @@ interface ControlPanelProps {
     setInstrumentalOnly?: (v: boolean) => void;
 }
 
-export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
+export const ControlPanel = memo(function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, setVoice, status, startJob, warmth, setWarmth, speed, setSpeed, duration, setDuration, instrumentalOnly, setInstrumentalOnly }: ControlPanelProps) {
     const isGenerating = status === "submitting" || status === "processing" || status === "queued";
 
     return (
@@ -204,4 +205,4 @@ export function ControlPanel({ prompt, setPrompt, mode, setMode, selectedVoice, 
             </div>
         </div>
     );
-}
+});

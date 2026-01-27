@@ -1,0 +1,3 @@
+## 2024-05-23 - [Studio Polling Re-render Cascade]
+**Learning:** The `StudioPage` maintains a `logs` state that updates frequently (via polling). Because `addLog` was not memoized and children (`Timeline`, `MixerPanel`) were not wrapped in `React.memo`, every log update triggered a full re-render of the heavy visualization components.
+**Action:** When adding high-frequency state updates (like logs or progress) to a parent component, ensure that (1) the updater function is memoized via `useCallback` and (2) heavy child components are wrapped in `React.memo` to prevent unrelated updates from degrading performance.
