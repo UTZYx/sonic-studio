@@ -58,6 +58,17 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const step = (max - min) / 20;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            e.preventDefault();
+            onChange(Math.min(max, value + step));
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            e.preventDefault();
+            onChange(Math.max(min, value - step));
+        }
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,7 +79,14 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                role="slider"
+                tabIndex={0}
+                aria-label={label}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                onKeyDown={handleKeyDown}
+                className="relative flex items-center justify-center cursor-ns-resize rounded-full focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
             >
