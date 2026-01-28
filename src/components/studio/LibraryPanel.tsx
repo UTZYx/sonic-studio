@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, Trash2, Download, Music, Box, Star } from "lucide-react";
+import { Play, Pause, Trash2, Download, Music, Box, Star, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SpatialCard } from "./SpatialCard";
 import { useLog } from "@/lib/logs/context";
@@ -20,6 +20,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
     const [files, setFiles] = useState<AudioFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [playingFile, setPlayingFile] = useState<string | null>(null);
+    const [promotedId, setPromotedId] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const { addLog } = useLog();
 
@@ -129,7 +130,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                     <AnimatePresence mode="popLayout">
                         {files.map((file, idx) => (
                             <motion.div
-                                key={file.name}
+                                key={file.id}
                                 layout
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -141,6 +142,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                         {/* Play Button */}
                                         <button
                                             onClick={() => handlePlay(file.url)}
+                                            aria-label={playingFile === file.url ? "Pause preview" : "Play preview"}
                                             className={`
                                                 shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all
                                                 ${playingFile === file.url
@@ -169,6 +171,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                         <a
                                             href={file.url}
                                             download={file.name}
+                                            aria-label={`Download ${file.name}`}
                                             className="p-2 text-neutral-600 hover:text-cyan-400 transition-colors"
                                             title="Download"
                                         >
@@ -177,6 +180,7 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
 
                                         <button
                                             onClick={() => handleDelete(file.id)}
+                                            aria-label="Delete track"
                                             className="p-2 text-neutral-600 hover:text-red-400 transition-colors"
                                             title="Delete"
                                         >
@@ -194,12 +198,19 @@ export function LibraryPanel({ refreshKey = 0 }: { refreshKey?: number }) {
                                                     })
                                                 });
                                                 addLog(`[Archive] Promoted '${file.name}' to Crimson Cassini`);
-                                                alert("Archived to Crimson Cassini");
+                                                // Success visual feedback
+                                                setPromotedId(file.id);
+                                                setTimeout(() => setPromotedId(null), 2000);
                                             }}
+                                            aria-label="Promote to Crimson Cassini"
                                             className="p-2 text-neutral-600 hover:text-yellow-400 transition-colors"
                                             title="Promote to Archive"
                                         >
-                                            <Star className="w-4 h-4" />
+                                            {promotedId === file.id ? (
+                                                <Check className="w-4 h-4 text-green-400" />
+                                            ) : (
+                                                <Star className="w-4 h-4" />
+                                            )}
                                         </button>
                                     </div>
 
