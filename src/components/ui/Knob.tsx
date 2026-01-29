@@ -58,6 +58,48 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        // 5% increments for arrows, 20% for page keys
+        const step = (range <= 2) ? 0.1 : (range / 20);
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowRight":
+            case "ArrowUp":
+                newVal = Math.min(max, value + step);
+                e.preventDefault();
+                break;
+            case "ArrowLeft":
+            case "ArrowDown":
+                newVal = Math.max(min, value - step);
+                e.preventDefault();
+                break;
+            case "Home":
+                newVal = min;
+                e.preventDefault();
+                break;
+            case "End":
+                newVal = max;
+                e.preventDefault();
+                break;
+            case "PageUp":
+                newVal = Math.min(max, value + (step * 4));
+                e.preventDefault();
+                break;
+            case "PageDown":
+                newVal = Math.max(min, value - (step * 4));
+                e.preventDefault();
+                break;
+            default:
+                return;
+        }
+
+        if (newVal !== value) {
+            onChange(newVal);
+        }
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -65,12 +107,29 @@ export function Knob({
         return "#fafafa";
     };
 
+    const ringColor = {
+        cyan: "focus-visible:ring-cyan-500",
+        purple: "focus-visible:ring-purple-500",
+        pink: "focus-visible:ring-pink-500",
+        white: "focus-visible:ring-white",
+    }[color] || "focus-visible:ring-cyan-500";
+
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className={`relative flex items-center justify-center cursor-ns-resize rounded-full focus-visible:outline-none focus-visible:ring-2 ${ringColor}`}
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+
+                // Accessibility
+                role="slider"
+                tabIndex={0}
+                aria-label={label || "Control Knob"}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-orientation="vertical"
+                onKeyDown={handleKeyDown}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
