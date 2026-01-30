@@ -58,6 +58,19 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range / 20; // 5% increment per key press
+
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            e.preventDefault();
+            onChange(Math.min(max, value + step));
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            e.preventDefault();
+            onChange(Math.max(min, value - step));
+        }
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,9 +81,16 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className="relative flex items-center justify-center cursor-ns-resize rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-cyan-500/50"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                aria-label={label || "Control Knob"}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
