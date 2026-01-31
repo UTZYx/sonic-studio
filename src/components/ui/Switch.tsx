@@ -26,8 +26,23 @@ export function Switch({
         yellow: "bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]",
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            onChange(!checked);
+        }
+    };
+
     return (
-        <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => onChange(!checked)}>
+        <div
+            className="flex flex-col items-center gap-2 cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 rounded-lg p-1"
+            onClick={() => onChange(!checked)}
+            role="switch"
+            aria-checked={checked}
+            aria-label={label}
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+        >
             {/* The Physical Switch */}
             <div className={`
                 w-12 h-16 rounded-lg border-2 transition-colors duration-200 relative overflow-hidden
