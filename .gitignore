@@ -9,3 +9,5 @@ node_modules
 server/bridge.log
 *.log
 **/__pycache__
+venv/
+test_venv/
