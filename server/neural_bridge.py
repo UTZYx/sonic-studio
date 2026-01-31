@@ -87,7 +87,7 @@ async def health_check():
     }
 
 @app.post("/generate")
-async def generate(req: GenerationRequest):
+def generate(req: GenerationRequest):
     model = manager.get_model(req.type, req.size)
     if not model:
         raise HTTPException(status_code=503, detail="Neural Engine failed to load model")
