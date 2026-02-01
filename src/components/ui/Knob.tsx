@@ -58,6 +58,24 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range / 20 || 1;
+        let newVal = value;
+
+        if (e.key === "ArrowUp" || e.key === "ArrowRight") newVal = Math.min(max, value + step);
+        else if (e.key === "ArrowDown" || e.key === "ArrowLeft") newVal = Math.max(min, value - step);
+        else if (e.key === "Home") newVal = min;
+        else if (e.key === "End") newVal = max;
+        else if (e.key === "PageUp") newVal = Math.min(max, value + (range / 5));
+        else if (e.key === "PageDown") newVal = Math.max(min, value - (range / 5));
+        else return;
+
+        e.preventDefault();
+        // Round to avoid floating point drift, roughly 2 decimals for typical ranges
+        onChange(Math.round(newVal * 100) / 100);
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,9 +86,16 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className="relative flex items-center justify-center cursor-ns-resize rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-cyan-500/50"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                role="slider"
+                tabIndex={0}
+                aria-label={label}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
+                onKeyDown={handleKeyDown}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
