@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { TimelineSegment } from "@/components/studio/Timeline/types";
 
 /**
@@ -16,8 +16,15 @@ export function useSonicEngine(
 ) {
     const [isWorking, setIsWorking] = useState(false);
 
+    // Stable ref for segments to prevent ignition recreation on every keystroke
+    const segmentsRef = useRef(timelineSegments);
+    useEffect(() => {
+        segmentsRef.current = timelineSegments;
+    }, [timelineSegments]);
+
     const igniteSegment = useCallback(async (segmentId: string) => {
-        const segment = timelineSegments.find(s => s.id === segmentId);
+        const segments = segmentsRef.current;
+        const segment = segments.find(s => s.id === segmentId);
         if (!segment || !segment.prompt) return;
 
         setIsWorking(true);
@@ -59,9 +66,9 @@ export function useSonicEngine(
         // 3. Resolve Audio Context (Neural Link)
         let audioContextUrl = undefined;
         if (segment.usePreviousContext) {
-            const index = timelineSegments.findIndex(s => s.id === segmentId);
+            const index = segments.findIndex(s => s.id === segmentId);
             if (index > 0) {
-                const prevSegment = timelineSegments[index - 1];
+                const prevSegment = segments[index - 1];
                 if (prevSegment.status === "completed" && prevSegment.audioUrl) {
                     audioContextUrl = prevSegment.audioUrl;
                 }
@@ -142,7 +149,7 @@ export function useSonicEngine(
             setIsWorking(false);
         }
 
-    }, [timelineSegments, setTimelineSegments, addLog]);
+    }, [setTimelineSegments, addLog]); // Removed timelineSegments dependency
 
     return { igniteSegment, isWorking };
 }
