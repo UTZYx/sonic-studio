@@ -2,7 +2,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, memo } from "react";
 import * as THREE from "three";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 
@@ -11,6 +11,8 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
     const count = 128;
     const dummy = useMemo(() => new THREE.Object3D(), []);
     const dataArray = useMemo(() => new Uint8Array(256), []);
+    // Optimization: Reuse Color object to prevent GC
+    const tempColor = useMemo(() => new THREE.Color(), []);
 
     useFrame((state) => {
         if (!mesh.current) return;
@@ -34,9 +36,8 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
             mesh.current.setMatrixAt(i, dummy.matrix);
 
             // Color update: Strict Cyan (0.5) to Purple (0.8)
-            const color = new THREE.Color();
-            color.setHSL(0.5 + (freq * 0.3), 1, 0.5 + freq * 0.5);
-            mesh.current.setColorAt(i, color);
+            tempColor.setHSL(0.5 + (freq * 0.3), 1, 0.5 + freq * 0.5);
+            mesh.current.setColorAt(i, tempColor);
         }
         mesh.current.instanceMatrix.needsUpdate = true;
         if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
@@ -50,7 +51,7 @@ function Waveform({ analyser }: { analyser: AnalyserNode | null }) {
     );
 }
 
-export function Visualizer({ analyser }: { analyser: AnalyserNode | null }) {
+export const Visualizer = memo(function Visualizer({ analyser }: { analyser: AnalyserNode | null }) {
     return (
         <div className="h-48 w-full rounded-xl overflow-hidden bg-black/50 border border-neutral-800 relative">
             <Canvas camera={{ position: [0, 0, 25], fov: 45 }}>
@@ -64,4 +65,4 @@ export function Visualizer({ analyser }: { analyser: AnalyserNode | null }) {
             </Canvas>
         </div>
     );
-}
+});
