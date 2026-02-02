@@ -58,6 +58,42 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const step = range / 100; // 1% step
+        const largeStep = range / 10; // 10% step
+
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowRight":
+            case "ArrowUp":
+                newVal = Math.min(max, value + step);
+                break;
+            case "ArrowLeft":
+            case "ArrowDown":
+                newVal = Math.max(min, value - step);
+                break;
+            case "PageUp":
+                newVal = Math.min(max, value + largeStep);
+                break;
+            case "PageDown":
+                newVal = Math.max(min, value - largeStep);
+                break;
+            case "Home":
+                newVal = min;
+                break;
+            case "End":
+                newVal = max;
+                break;
+            default:
+                return;
+        }
+
+        e.preventDefault();
+        onChange(newVal);
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -68,9 +104,16 @@ export function Knob({
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className="relative flex items-center justify-center cursor-ns-resize rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black focus-visible:ring-cyan-500"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                tabIndex={0}
+                role="slider"
+                aria-label={label}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-valuenow={value}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
@@ -98,8 +141,8 @@ export function Knob({
 
             {/* Label & Value */}
             <div className="text-center">
-                <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
-                <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
+                <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase" aria-hidden="true">{label}</div>
+                <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`} aria-hidden="true">
                     {value.toFixed(1)}
                 </div>
             </div>
