@@ -5,7 +5,6 @@ import { AudioEngine } from "@/lib/audio/engine";
 import dynamic from "next/dynamic";
 import { Knob } from "@/components/ui/Knob";
 import { Fader } from "@/components/ui/Fader";
-import { Switch } from "@/components/ui/Switch";
 import { Mic, Music, Save, Volume2, Sliders, Play, Square, Activity, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 

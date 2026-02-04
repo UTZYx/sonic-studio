@@ -58,6 +58,44 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const step = (max - min) / 20; // 5% step
+        let newVal = value;
+
+        switch (e.key) {
+            case "ArrowRight":
+            case "ArrowUp":
+                newVal = Math.min(max, value + step);
+                e.preventDefault();
+                break;
+            case "ArrowLeft":
+            case "ArrowDown":
+                newVal = Math.max(min, value - step);
+                e.preventDefault();
+                break;
+            case "Home":
+                newVal = min;
+                e.preventDefault();
+                break;
+            case "End":
+                newVal = max;
+                e.preventDefault();
+                break;
+            case "PageUp":
+                newVal = Math.min(max, value + (step * 4));
+                e.preventDefault();
+                break;
+            case "PageDown":
+                newVal = Math.max(min, value - (step * 4));
+                e.preventDefault();
+                break;
+        }
+
+        if (newVal !== value) {
+            onChange(newVal);
+        }
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -65,12 +103,26 @@ export function Knob({
         return "#fafafa";
     };
 
+    const getFocusColorClass = () => {
+        if (color === "cyan") return "focus-visible:ring-cyan-500";
+        if (color === "purple") return "focus-visible:ring-purple-500";
+        if (color === "pink") return "focus-visible:ring-pink-500";
+        return "focus-visible:ring-white";
+    };
+
     return (
         <div className="flex flex-col items-center gap-2 group select-none">
             <div
-                className="relative flex items-center justify-center cursor-ns-resize"
+                className={`relative flex items-center justify-center cursor-ns-resize rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${getFocusColorClass()}`}
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                tabIndex={0}
+                role="slider"
+                aria-label={label}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
             >
                 {/* Back Plate */}
                 <div className="absolute inset-0 rounded-full bg-sonic-void border border-neutral-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
