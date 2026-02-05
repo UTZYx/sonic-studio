@@ -59,19 +59,63 @@ export function Fader({
         onChange(newValue);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const step = (max - min) / 20; // 5% increments
+        const largeStep = (max - min) / 5; // 20% increments
+        let newValue = value;
+
+        switch (e.key) {
+            case "ArrowUp":
+            case "ArrowRight":
+                newValue = Math.min(max, value + step);
+                break;
+            case "ArrowDown":
+            case "ArrowLeft":
+                newValue = Math.max(min, value - step);
+                break;
+            case "PageUp":
+                newValue = Math.min(max, value + largeStep);
+                break;
+            case "PageDown":
+                newValue = Math.max(min, value - largeStep);
+                break;
+            case "Home":
+                newValue = min;
+                break;
+            case "End":
+                newValue = max;
+                break;
+            default:
+                return;
+        }
+
+        e.preventDefault();
+        onChange(newValue);
+    };
+
     const getColor = (opacity = 1) => {
         if (color === "cyan") return `rgba(6, 182, 212, ${opacity})`;
         return `rgba(168, 85, 247, ${opacity})`;
     };
+
+    const ringColor = color === "cyan" ? "focus-visible:ring-cyan-500" : "focus-visible:ring-purple-500";
 
     return (
         <div className="flex flex-col items-center gap-4 group select-none">
             {/* Track */}
             <div
                 ref={trackRef}
-                className="relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize"
+                className={`relative w-12 rounded-lg bg-neutral-950 border border-neutral-800 shadow-inner flex justify-center cursor-ns-resize focus-visible:ring-2 ${ringColor} focus-visible:outline-none`}
                 style={{ height }}
                 onMouseDown={handleMouseDown}
+                onKeyDown={handleKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-label={label || "Fader"}
+                aria-valuenow={value}
+                aria-valuemin={min}
+                aria-valuemax={max}
+                aria-orientation="vertical"
             >
                 {/* Center Line */}
                 <div className="absolute top-2 bottom-2 w-[1px] bg-neutral-800"></div>
