@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 interface KnobProps {
@@ -58,6 +58,41 @@ export function Knob({
         window.removeEventListener("mouseup", handleMouseUp);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        const range = max - min;
+        const smallStep = range / 50; // 2%
+        const largeStep = range / 10; // 10%
+        let newValue = value;
+
+        switch (e.key) {
+            case "ArrowRight":
+            case "ArrowUp":
+                newValue = Math.min(max, value + smallStep);
+                break;
+            case "ArrowLeft":
+            case "ArrowDown":
+                newValue = Math.max(min, value - smallStep);
+                break;
+            case "PageUp":
+                newValue = Math.min(max, value + largeStep);
+                break;
+            case "PageDown":
+                newValue = Math.max(min, value - largeStep);
+                break;
+            case "Home":
+                newValue = min;
+                break;
+            case "End":
+                newValue = max;
+                break;
+            default:
+                return; // Allow other keys to propagate
+        }
+
+        e.preventDefault();
+        onChange(newValue);
+    };
+
     const getColor = () => {
         if (color === "cyan") return "#06b6d4";
         if (color === "purple") return "#a855f7";
@@ -65,8 +100,27 @@ export function Knob({
         return "#fafafa";
     };
 
+    const getFocusColorClass = () => {
+        if (color === "cyan") return "focus-visible:ring-cyan-500";
+        if (color === "purple") return "focus-visible:ring-purple-500";
+        if (color === "pink") return "focus-visible:ring-pink-500";
+        return "focus-visible:ring-white";
+    };
+
     return (
-        <div className="flex flex-col items-center gap-2 group select-none">
+        <div
+            className={`
+                flex flex-col items-center gap-2 group select-none outline-none rounded-xl p-1
+                ${getFocusColorClass()} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black
+            `}
+            tabIndex={0}
+            role="slider"
+            aria-label={label || "Control Knob"}
+            aria-valuemin={min}
+            aria-valuemax={max}
+            aria-valuenow={value}
+            onKeyDown={handleKeyDown}
+        >
             <div
                 className="relative flex items-center justify-center cursor-ns-resize"
                 style={{ width: size, height: size }}
@@ -97,7 +151,7 @@ export function Knob({
             </div>
 
             {/* Label & Value */}
-            <div className="text-center">
+            <div className="text-center pointer-events-none">
                 <div className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase">{label}</div>
                 <div className={`text-xs font-mono transition-colors ${isDragging ? `text-${color}-400` : "text-neutral-400"}`}>
                     {value.toFixed(1)}
