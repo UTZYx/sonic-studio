@@ -19,6 +19,68 @@ interface MixerProps {
     onSave?: (jobId: string, type: string) => void;
 }
 
+interface ChannelStripProps {
+    label: string;
+    icon: any;
+    color: "cyan" | "purple";
+    vol: number;
+    setVol: (val: number) => void;
+    pan: number;
+    setPan: (val: number) => void;
+    muted: boolean;
+    setMuted: (val: boolean) => void;
+    isSolo: boolean;
+    setSolo: (val: "voice" | "music" | null) => void;
+    jobId?: string | null;
+    url: string | null;
+    onSave?: (jobId: string, type: string) => void;
+}
+
+const ChannelStrip = ({ label, icon: Icon, color, vol, setVol, pan, setPan, muted, setMuted, isSolo, setSolo, jobId, url, onSave }: ChannelStripProps) => (
+    <div className={`p-6 bg-white/5 rounded-3xl border border-white/5 relative overflow-hidden transition-all duration-500 ${isSolo ? 'ring-1 ring-yellow-500/20' : ''}`}>
+        <div className="flex items-center justify-between mb-6 relative z-10">
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl bg-black/40 text-${color === 'cyan' ? 'cyan-400' : 'purple-400'}`}>
+                    <Icon className="w-4 h-4" />
+                </div>
+                <div>
+                    <div className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{label}</div>
+                    <div className={`text-[8px] font-mono tracking-widest ${url ? "text-cyan-500" : "text-neutral-700 uppercase"}`}>
+                        {url ? "SIGNAL ACTIVE" : "NO LINK"}
+                    </div>
+                </div>
+            </div>
+            {jobId && onSave && (
+                <button
+                    onClick={() => onSave(jobId, label.includes("Voice") ? "Voice" : "Music")}
+                    className="p-2 rounded-lg hover:bg-white/10 text-neutral-600 hover:text-white transition-all"
+                >
+                    <Save className="w-4 h-4" />
+                </button>
+            )}
+        </div>
+
+        <div className="flex flex-col items-center gap-6 relative z-10">
+            <Knob label="PAN" value={pan} onChange={setPan} min={-1} max={1} color="white" size={36} />
+            <Fader label="LVL" value={vol} onChange={setVol} min={0} max={1.2} color={color} height={140} />
+            <div className="flex gap-2 w-full">
+                <button
+                    onClick={() => setMuted(!muted)}
+                    className={`flex-1 py-1.5 rounded-lg text-[8px] font-black transition-all border ${muted ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'bg-black/40 border-white/5 text-neutral-600'}`}
+                >
+                    MUTE
+                </button>
+                <button
+                    onClick={() => setSolo(isSolo ? null : (label.includes("Voice") ? "voice" : "music"))}
+                    className={`flex-1 py-1.5 rounded-lg text-[8px] font-black transition-all border ${isSolo ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-black/40 border-white/5 text-neutral-600'}`}
+                >
+                    SOLO
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave }: MixerProps) {
     const engineRef = useRef<AudioEngine | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -209,51 +271,6 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
         }
     }
 
-    const ChannelStrip = ({ label, icon: Icon, color, vol, setVol, pan, setPan, muted, setMuted, isSolo, setSolo, jobId, url }: any) => (
-        <div className={`p-6 bg-white/5 rounded-3xl border border-white/5 relative overflow-hidden transition-all duration-500 ${isSolo ? 'ring-1 ring-yellow-500/20' : ''}`}>
-            <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl bg-black/40 text-${color === 'cyan' ? 'cyan-400' : 'purple-400'}`}>
-                        <Icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                        <div className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{label}</div>
-                        <div className={`text-[8px] font-mono tracking-widest ${url ? "text-cyan-500" : "text-neutral-700 uppercase"}`}>
-                            {url ? "SIGNAL ACTIVE" : "NO LINK"}
-                        </div>
-                    </div>
-                </div>
-                {jobId && onSave && (
-                    <button
-                        onClick={() => onSave(jobId, label.includes("Voice") ? "Voice" : "Music")}
-                        className="p-2 rounded-lg hover:bg-white/10 text-neutral-600 hover:text-white transition-all"
-                    >
-                        <Save className="w-4 h-4" />
-                    </button>
-                )}
-            </div>
-
-            <div className="flex flex-col items-center gap-6 relative z-10">
-                <Knob label="PAN" value={pan} onChange={setPan} min={-1} max={1} color="white" size={36} />
-                <Fader label="LVL" value={vol} onChange={setVol} min={0} max={1.2} color={color} height={140} />
-                <div className="flex gap-2 w-full">
-                    <button
-                        onClick={() => setMuted(!muted)}
-                        className={`flex-1 py-1.5 rounded-lg text-[8px] font-black transition-all border ${muted ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'bg-black/40 border-white/5 text-neutral-600'}`}
-                    >
-                        MUTE
-                    </button>
-                    <button
-                        onClick={() => setSolo(isSolo ? null : (label.includes("Voice") ? "voice" : "music"))}
-                        className={`flex-1 py-1.5 rounded-lg text-[8px] font-black transition-all border ${isSolo ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.2)]' : 'bg-black/40 border-white/5 text-neutral-600'}`}
-                    >
-                        SOLO
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
         <div className="p-8 space-y-8">
             <div className="flex flex-col lg:flex-row gap-8 items-center bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
@@ -302,8 +319,8 @@ export function MixerPanel({ voiceUrl, musicUrl, voiceJobId, musicJobId, onSave 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <ChannelStrip label="Voice Spectrum" icon={Mic} color="cyan" vol={voiceVol} setVol={setVoiceVol} pan={voicePan} setPan={setVoicePan} muted={voiceMuted} setMuted={setVoiceMuted} isSolo={solo === "voice"} setSolo={setSolo} jobId={voiceJobId} url={voiceUrl} />
-                <ChannelStrip label="Music Spectrum" icon={Music} color="purple" vol={musicVol} setVol={setMusicVol} pan={musicPan} setPan={setMusicPan} muted={musicMuted} setMuted={setMusicMuted} isSolo={solo === "music"} setSolo={setSolo} jobId={musicJobId} url={musicUrl} />
+                <ChannelStrip label="Voice Spectrum" icon={Mic} color="cyan" vol={voiceVol} setVol={setVoiceVol} pan={voicePan} setPan={setVoicePan} muted={voiceMuted} setMuted={setVoiceMuted} isSolo={solo === "voice"} setSolo={setSolo} jobId={voiceJobId} url={voiceUrl} onSave={onSave} />
+                <ChannelStrip label="Music Spectrum" icon={Music} color="purple" vol={musicVol} setVol={setMusicVol} pan={musicPan} setPan={setMusicPan} muted={musicMuted} setMuted={setMusicMuted} isSolo={solo === "music"} setSolo={setSolo} jobId={musicJobId} url={musicUrl} onSave={onSave} />
             </div>
         </div>
     );
